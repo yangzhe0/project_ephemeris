@@ -278,5 +278,20 @@ def get_file():
         
     return send_file(filepath, as_attachment=True, download_name=filename)
 
+@app.route('/robots.txt')
+def robots():
+    """响应 robots.txt"""
+    return "User-agent: *\nDisallow:", 200, {'Content-Type': 'text/plain'}
+
+@app.route('/favicon.ico')
+def favicon():
+    """响应 favicon.ico"""
+    return send_file(os.path.join(app.root_path, 'static', 'favicon.png'), mimetype='image/png')
+
+@app.route('/favicon.png')
+def favicon_png():
+    """响应 favicon.png"""
+    return send_file(os.path.join(app.root_path, 'static', 'favicon.png'), mimetype='image/png')
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)
