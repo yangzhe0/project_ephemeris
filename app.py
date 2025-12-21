@@ -235,7 +235,13 @@ def download_chart():
     if not ra or not dec:
         return jsonify({'success': False, 'message': '缺少必要参数 (赤经或赤纬)'})
 
-    # 格式化文件名
+    # 转换为 float
+    try:
+        fov_val = float(fov)
+    except:
+        fov_val = 7.0
+
+    # 格式化文件名 (加入 FOV 防止浏览器缓存)
     try:
         dt = datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S")
         formatted_time = dt.strftime("%Y%m%d_%Hh%Mm%Ss")
@@ -243,17 +249,18 @@ def download_chart():
         formatted_time = datetime.now().strftime("%Y%m%d_%Hh%Mm%Ss")
         
     sat_clean = satellite_name.split('(')[0].strip()
-    filename = f"{sat_clean}_{formatted_time}.gif"
+    # 使用 g/G 格式化自动去掉不必要的 .0，或者直接用 fov_val 
+    # 为了文件名整洁，如果接近整数显示整数
+    if abs(fov_val - round(fov_val)) < 0.001:
+        fov_str = f"{int(round(fov_val))}"
+    else:
+        fov_str = f"{fov_val}"
+        
+    filename = f"{sat_clean}_{formatted_time}_fov{fov_str}.gif"
     
     # 使用临时文件
     temp_dir = tempfile.gettempdir()
     filepath = os.path.join(temp_dir, filename)
-    
-    # 转换为 float
-    try:
-        fov_val = float(fov)
-    except:
-        fov_val = 7.0
 
     success = download_dss_image(ra, dec, filepath, height=fov_val, width=fov_val)
     
