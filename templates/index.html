@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>天文卫星星历与寻星图工具</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" href="/favicon.png" type="image/jpeg">
     <link rel="shortcut icon" href="/favicon.ico">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -65,6 +65,44 @@
         .animate-fade-in {
             animation: fade-in 0.2s ease-out;
         }
+
+        /* 寻星图中心目标标记（仅显示图层，不写入原始 DSS 图片） */
+        .target-marker {
+            --marker-scale: 1;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 14px;
+            height: 14px;
+            transform: translate(-50%, -50%) scale(var(--marker-scale));
+            transform-origin: center;
+            pointer-events: none;
+            color: #ff3b30;
+            filter: drop-shadow(0 0 2px #000) drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+            z-index: 20;
+        }
+
+        .target-marker::before,
+        .target-marker::after {
+            content: "";
+            position: absolute;
+            background: currentColor;
+        }
+
+        .target-marker::before {
+            left: 6px;
+            top: -3px;
+            width: 1px;
+            height: 20px;
+        }
+
+        .target-marker::after {
+            left: -3px;
+            top: 6px;
+            width: 20px;
+            height: 1px;
+        }
+
     </style>
 </head>
 
@@ -149,7 +187,7 @@
                                     {% endfor %}
                                 </div>
                                 <div class="pt-1.5 border-t border-gray-200">
-                                    <input type="text" id="customSatellite" placeholder="或输入自定义代码 (如 301 表示月球)"
+                                    <input type="text" id="customSatellite" placeholder="或输入 MSU 自然卫星代码 (如 5001 表示木卫一)"
                                         oninput="clearRadioSat()"
                                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition bg-white">
                                 </div>
@@ -203,16 +241,16 @@
                                 </div>
                                 <div>
                                     <label class="text-xs text-gray-500 mb-1 block">步数</label>
-                                    <input type="text" id="ntimes" value="1"
+                                    <input type="number" id="ntimes" value="1" min="1" max="100" step="1"
                                         class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
                                 </div>
                                 <div>
                                     <label class="text-xs text-gray-500 mb-1 block">步长 (Hours)</label>
-                                    <input type="text" id="timestep" value="1"
+                                    <input type="number" id="timestep" value="1" min="0.001" max="8760" step="any"
                                         class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
                                 </div>
                                 <div>
-                                    <label class="text-xs text-purple-600 font-bold mb-1 block">视场(角秒)</label>
+                                    <label class="text-xs text-purple-600 font-bold mb-1 block">视场 (角分)</label>
                                     <input type="number" id="fov" value="10" min="1" max="60"
                                         class="w-full text-xs border border-purple-200 bg-purple-50 text-purple-700 font-bold rounded p-1.5 text-center focus:ring-2 focus:ring-purple-500 focus:outline-none">
                                 </div>
@@ -334,44 +372,6 @@
             radios.forEach(r => r.checked = false);
         }
 
-        // 格式化日期
-        function formatDate(date) {
-            const pad = (n) => n.toString().padStart(2, '0');
-            const YYYY = date.getFullYear();
-            const MM = pad(date.getMonth() + 1);
-            const DD = pad(date.getDate());
-            const HH = pad(date.getHours());
-            const mm = pad(date.getMinutes());
-            const ss = pad(date.getSeconds());
-            return `${YYYY} ${MM} ${DD} ${HH} ${mm} ${ss}`;
-        }
-
-        // 设置时间
-        function setNow(type) {
-            const now = new Date();
-            if (type === 'utc') {
-                const YYYY = now.getUTCFullYear();
-                const MM = (now.getUTCMonth() + 1).toString().padStart(2, '0');
-                const DD = now.getUTCDate().toString().padStart(2, '0');
-                const HH = now.getUTCHours().toString().padStart(2, '0');
-                const mm = now.getUTCMinutes().toString().padStart(2, '0');
-                const ss = now.getUTCSeconds().toString().padStart(2, '0');
-                document.getElementById('initmom').value = `${YYYY} ${MM} ${DD} ${HH} ${mm} ${ss}`;
-            } else {
-                document.getElementById('initmom').value = formatDate(now);
-            }
-        }
-        setNow('utc');
-
-        // 启动时钟：每秒更新一次，确保时间总是最新的
-        // 这样可以避免"每分钟"更新时的延迟感，且资源消耗极低（仅客户端文本更新）
-        setInterval(() => {
-            // 如果用户没有正在输入（焦点不在输入框上），则更新时间
-            if (document.activeElement.id !== 'initmom') {
-                setNow('utc');
-            }
-        }, 1000);
-
         // 提交计算
         async function submitCalculation() {
             const btn = document.getElementById('submitBtn');
@@ -400,16 +400,22 @@
                 return;
             }
 
+            const observatory = document.getElementById('observatory').value.trim();
+            if (!observatory) {
+                alert("请输入观测站代码");
+                return;
+            }
+
             // 处理时间:北京时间转UTC
             let initmom = '';
             const localInput = document.getElementById('localTimeInput').value.trim();
 
             if (localInput) {
                 // 解析北京时间并转换为UTC
-                const cleanStr = localInput.replace(/[-:]/g, ' ');
+                const cleanStr = localInput.replace(/[-:]/g, ' ').trim();
                 const parts = cleanStr.split(/\s+/);
 
-                if (parts.length >= 6) {
+                if (parts.length === 6 && parts.every(part => /^\d+$/.test(part))) {
                     const Y = parseInt(parts[0]);
                     const M = parseInt(parts[1]) - 1; // Month 0-11
                     const D = parseInt(parts[2]);
@@ -417,7 +423,15 @@
                     const m = parseInt(parts[4]);
                     const s = parseInt(parts[5]);
 
-                    // 减去8小时转换为UTC
+                    const validLocalDate = new Date(Date.UTC(Y, M, D, h, m, s));
+                    if (validLocalDate.getUTCFullYear() !== Y || validLocalDate.getUTCMonth() !== M ||
+                        validLocalDate.getUTCDate() !== D || validLocalDate.getUTCHours() !== h ||
+                        validLocalDate.getUTCMinutes() !== m || validLocalDate.getUTCSeconds() !== s) {
+                        alert("时间数值无效，请检查日期和时分秒");
+                        return;
+                    }
+
+                    // 北京时间固定按 UTC+8 转换
                     const dateObj = new Date(Date.UTC(Y, M, D, h - 8, m, s));
 
                     const pad = n => n.toString().padStart(2, '0');
@@ -444,7 +458,7 @@
             previewContainer.classList.add('hidden'); // 隐藏之前的预览
 
             const payload = {
-                observatory: document.getElementById('observatory').value,
+                observatory: observatory,
                 satellite: satellite,
                 initmom: initmom,
                 plnvar: '0',
@@ -610,6 +624,8 @@
                     previewContent.innerHTML = `
                         <div class="relative w-full h-full flex items-center justify-center">
                             <img src="${currentPreviewUrl}" alt="DSS Chart" class="max-h-full max-w-full object-contain rounded shadow-lg border border-gray-700 cursor-zoom-in" onclick="openFullscreen()" title="点击全屏查看">
+                            <div class="target-marker" aria-hidden="true">
+                            </div>
                             <div class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded pointer-events-none">
                                 FOV: ${fov}'
                             </div>
@@ -645,7 +661,7 @@
             if (!currentPreviewUrl) return;
             const link = document.createElement('a');
             link.href = currentPreviewUrl;
-            link.download = ''; // 文件名由 Content-Disposition 头控制
+            link.download = currentPreviewFilename || 'dss_chart.gif';
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -703,7 +719,7 @@
                         <code>500</code>。
                     </li>
                     <li><strong>目标天体 (Object)</strong>: 选择要查询的卫星,如 S0 (Saturn Center), J6 (Himalia)
-                        等。也可以在下方输入框中输入自定义天体代码,如 <code>301</code> (月球)。</li>
+                        等。也可以输入 MSU 自然卫星代码,如 <code>5001</code> (木卫一)。本接口不支持通用月球代码 <code>301</code>。</li>
                     <li><strong>观测时间</strong>: 支持输入<strong>北京时间 (+8)</strong>,系统会自动转换为 UTC 发送给后端。留空则自动使用当前 UTC 时间。</li>
                 </ul>
 
@@ -778,9 +794,12 @@
         <div id="imageContainer" class="w-full h-full flex items-center justify-center overflow-hidden cursor-move"
             onwheel="handleWheel(event)" onmousedown="startDrag(event)" onmousemove="drag(event)" onmouseup="endDrag()"
             onmouseleave="endDrag()">
-            <img id="fullscreenImage" src=""
-                class="max-w-none transition-transform duration-75 ease-out shadow-2xl rounded-sm will-change-transform"
-                style="transform: scale(1) translate(0px, 0px);">
+            <div id="fullscreenStage" class="relative inline-block transition-transform duration-75 ease-out will-change-transform"
+                style="transform: translate(0px, 0px) scale(1);">
+                <img id="fullscreenImage" src="" class="block max-w-none shadow-2xl rounded-sm">
+                <div id="fullscreenTargetMarker" class="target-marker" aria-hidden="true">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -794,10 +813,12 @@
         let startY = 0;
 
         function updateImageTransform() {
-            const img = document.getElementById('fullscreenImage');
+            const stage = document.getElementById('fullscreenStage');
+            const marker = document.getElementById('fullscreenTargetMarker');
             const zoomText = document.getElementById('zoomLevel');
-            if (img) {
-                img.style.transform = `translate(${pannedX}px, ${pannedY}px) scale(${currentScale})`;
+            if (stage) {
+                stage.style.transform = `translate(${pannedX}px, ${pannedY}px) scale(${currentScale})`;
+                marker.style.setProperty('--marker-scale', 1 / currentScale);
                 zoomText.innerText = `${Math.round(currentScale * 100)}%`;
             }
         }
