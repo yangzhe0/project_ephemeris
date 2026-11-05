@@ -205,7 +205,7 @@
                             <!-- 10个目标平铺，无内部滚动条 -->
                             <div class="grid grid-cols-2 gap-1.5 mb-2" id="satelliteButtonsContainer">
                                 {% for sat in satellites %}
-                                <label class="relative flex items-center justify-between px-2.5 py-2.5 rounded-lg border border-gray-200 bg-white cursor-pointer overflow-hidden transition select-none hover:border-blue-400 group"
+                                <label class="relative flex items-center px-2 py-2 rounded-lg border border-gray-200 bg-white cursor-pointer overflow-hidden transition select-none hover:border-blue-400 group"
                                        data-sat-code="{{ sat.code }}" data-planet="{{ sat.planet }}" id="sat-label-{{ sat.code }}"
                                        title="点击直接选中并自动更新">
                                     <input type="radio" name="satellite" value="{{ sat.code }}" data-name="{{ sat.name.split(' ')[0] }}" class="peer sr-only"
@@ -214,10 +214,22 @@
                                     <!-- 底色进度条背景（由 JS 动态每分钟刷新宽度和颜色） -->
                                     <span class="obs-progress-bar absolute inset-y-0 left-0 bg-blue-100 transition-all duration-700 ease-out pointer-events-none" style="width: 100%;"></span>
                                     
-                                    <!-- 按钮前景文字 -->
-                                    <div class="relative z-10 flex items-center justify-between w-full">
-                                        <span class="font-bold text-xs text-gray-800 tracking-wide sat-name group-hover:text-blue-600 transition-colors">{{ sat.name.split(' ')[0] }}</span>
-                                        <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-600 bg-white/80 shadow-xs backdrop-blur-xs sat-status-badge whitespace-nowrap">--</span>
+                                    <!-- 按钮前景文字：表格化列排布（左对齐名称 + 固定等宽高度角 + 固定等宽时间） -->
+                                    <div class="relative z-10 flex items-center w-full">
+                                        <!-- 列 1: 目标名称（统一左对齐，半粗） -->
+                                        <span class="font-semibold text-xs text-gray-800 tracking-tight truncate sat-name group-hover:text-blue-600 transition-colors flex-1 min-w-0 text-left">
+                                            {{ sat.name.split(' ')[0] }}
+                                        </span>
+                                        
+                                        <!-- 列 2: 实时高度角（等宽对齐区域） -->
+                                        <span class="sat-alt-badge w-10 text-right font-mono font-medium text-[11px] text-gray-500 shrink-0 select-none">
+                                            --
+                                        </span>
+                                        
+                                        <!-- 列 3: 状态/剩余时间（等宽对齐药丸） -->
+                                        <span class="sat-time-badge w-[58px] text-center font-mono font-medium text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-gray-100 text-gray-500 shadow-2xs whitespace-nowrap">
+                                            --
+                                        </span>
                                     </div>
                                     
                                     <!-- 选中状态高亮外边框 -->
@@ -588,35 +600,56 @@
                     stBadge.innerText = `${stCode} ${shortName}`;
                 }
 
-                // 2. 动态更新每个天体按钮的实时高度角、底色进度条和徽标
+                // 2. 动态更新每个天体按钮的实时高度角、底色进度条和时间徽标（表格化分列渲染，统一中等字重）
                 const labels = document.querySelectorAll('#satelliteButtonsContainer label[data-planet]');
                 labels.forEach(label => {
                     const planet = label.getAttribute('data-planet');
                     const pInfo = data.planets ? data.planets[planet] : null;
                     const pBar = label.querySelector('.obs-progress-bar');
-                    const badge = label.querySelector('.sat-status-badge');
-                    if (!pInfo || !pBar || !badge) return;
+                    const altBadge = label.querySelector('.sat-alt-badge');
+                    const timeBadge = label.querySelector('.sat-time-badge');
+                    if (!pInfo || !pBar) return;
 
-                    badge.innerText = pInfo.badge || '--';
                     label.title = pInfo.tooltip || '';
 
-                    if (pInfo.status === 'observing') {
-                        pBar.style.width = `${pInfo.pct}%`;
-                        if (pInfo.pct > 30) {
-                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-emerald-100/80 transition-all duration-700 ease-out pointer-events-none';
-                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-emerald-700 bg-white/90 shadow-xs sat-status-badge whitespace-nowrap';
+                    // 列 2: 实时高度角（等宽区域对齐）
+                    if (altBadge) {
+                        altBadge.innerText = pInfo.alt_str || '--';
+                        if (pInfo.alt_deg !== null && pInfo.alt_deg !== undefined) {
+                            if (pInfo.alt_deg >= 30) {
+                                altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-medium text-[11px] text-emerald-800 shrink-0 select-none';
+                            } else if (pInfo.alt_deg > 0) {
+                                altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-medium text-[11px] text-amber-800 shrink-0 select-none';
+                            } else {
+                                altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-medium text-[11px] text-gray-400 shrink-0 select-none';
+                            }
                         } else {
-                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-amber-100/90 transition-all duration-700 ease-out pointer-events-none';
-                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-amber-700 bg-white/90 shadow-xs sat-status-badge whitespace-nowrap';
+                            altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-medium text-[11px] text-gray-400 shrink-0 select-none';
                         }
-                    } else if (pInfo.status === 'waiting') {
-                        pBar.style.width = '100%';
-                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-blue-50/70 border-r border-blue-200 transition-all duration-700 ease-out pointer-events-none';
-                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-blue-600 bg-blue-50/90 shadow-xs sat-status-badge whitespace-nowrap';
-                    } else {
-                        pBar.style.width = '0%';
-                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-gray-100 transition-all duration-700 ease-out pointer-events-none';
-                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-400 bg-gray-100 shadow-xs sat-status-badge whitespace-nowrap';
+                    }
+
+                    // 列 3: 状态/剩余时间徽标（等宽药丸，字重统一为 font-medium 保证全行整齐划一）
+                    if (timeBadge) {
+                        timeBadge.innerText = pInfo.time_badge || pInfo.badge || '--';
+
+                        if (pInfo.status === 'observing') {
+                            pBar.style.width = `${pInfo.pct}%`;
+                            if (pInfo.pct > 30) {
+                                pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-emerald-100/80 transition-all duration-700 ease-out pointer-events-none';
+                                timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-medium text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs whitespace-nowrap';
+                            } else {
+                                pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-amber-100/90 transition-all duration-700 ease-out pointer-events-none';
+                                timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-medium text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs whitespace-nowrap';
+                            }
+                        } else if (pInfo.status === 'waiting') {
+                            pBar.style.width = '100%';
+                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-blue-50/70 border-r border-blue-200 transition-all duration-700 ease-out pointer-events-none';
+                            timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-medium text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs whitespace-nowrap';
+                        } else {
+                            pBar.style.width = '0%';
+                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-gray-100 transition-all duration-700 ease-out pointer-events-none';
+                            timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-medium text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-gray-100 text-gray-500 shadow-2xs whitespace-nowrap';
+                        }
                     }
                 });
             } catch (e) {

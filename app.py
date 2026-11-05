@@ -713,9 +713,11 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
         if alt_val is not None:
             round_alt = round(alt_val)
             alt_prefix = f"+{round_alt}° " if round_alt >= 0 else f"{round_alt}° "
+            alt_text = f"+{round_alt}°" if round_alt >= 0 else f"{round_alt}°"
             alt_tip_str = f"当前高度角 {alt_val:+.1f}° · "
         else:
             alt_prefix = ""
+            alt_text = "--"
             alt_tip_str = ""
 
         st = datetime.fromisoformat(p_info["start_iso"])
@@ -727,6 +729,8 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
                 "valid": True, "status": "waiting", "pct": 100,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
                 "alt_deg": alt_val,
+                "alt_str": alt_text,
+                "time_badge": f"{p_info['start']}开",
                 "badge": f"{alt_prefix}{p_info['start']}开",
                 "tooltip": f"【待开启】{alt_tip_str}今晚窗口: {p_info['start']} ~ {p_info['end']} (预计 {p_info['start']} 升至30°)"
             }
@@ -735,6 +739,8 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
                 "valid": True, "status": "ended", "pct": 0,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
                 "alt_deg": alt_val,
+                "alt_str": alt_text,
+                "time_badge": "已落",
                 "badge": f"{alt_prefix}已落" if alt_prefix else "已落",
                 "tooltip": f"【已落】{alt_tip_str}窗口已结束 (已于 {p_info['end']} 降至30°以下)"
             }
@@ -752,6 +758,8 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
                 "valid": True, "status": "observing", "pct": pct,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
                 "alt_deg": alt_val,
+                "alt_str": alt_text,
+                "time_badge": rem_str,
                 "badge": f"{alt_prefix}{rem_str}",
                 "tooltip": f"【可观测】{alt_tip_str}距观测结束还剩 {rem_h:.1f}小时 (至 {p_info['end']} 截止，高度角>30°)，窗口总长: {p_info['start']} ~ {p_info['end']}"
             }
