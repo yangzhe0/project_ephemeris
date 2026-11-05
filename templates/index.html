@@ -791,8 +791,8 @@
                                         <span class="text-purple-600 text-[11px] block">(${angText})</span>
                                     </td>
                                     <td class="px-3 py-2.5 text-right whitespace-nowrap">
-                                        <button onclick="copyToClipboard('${item.ra_pure}\n${item.de_pure}', this)" 
-                                            class="px-2.5 py-1 text-xs font-medium border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1 shadow-2xs"
+                                        <button onclick="copyRowCoordinates(${index}, this)" 
+                                            class="px-2.5 py-1 text-xs font-medium border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
                                             title="复制赤经赤纬 (可直接粘贴至望远镜控制台)">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -811,19 +811,62 @@
             container.innerHTML = bannerHtml + tableHtml;
         }
 
-        // 复制功能
+        // 针对行序号的精确复制（避免字符串内换行导致的 HTML 属性语法错误）
+        function copyRowCoordinates(index, btn) {
+            if (!currentResults || !currentResults[index]) {
+                alert("未找到该行坐标数据");
+                return;
+            }
+            const item = currentResults[index];
+            const coordText = `${item.ra_pure}\n${item.de_pure}`;
+            copyToClipboard(coordText, btn);
+        }
+
+        // 通用复制功能（支持 navigator.clipboard 并在移动端/无权限时自动降级到 execCommand）
         async function copyToClipboard(text, btn) {
-            try {
-                await navigator.clipboard.writeText(text);
+            let success = false;
+
+            // 1. 尝试现代 Clipboard API
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    success = true;
+                } catch (err) {
+                    console.warn("navigator.clipboard failed, attempting fallback:", err);
+                }
+            }
+
+            // 2. 降级方案：创建临时隐藏 textarea 并使用 execCommand('copy')
+            if (!success) {
+                try {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.left = '-9999px';
+                    textarea.style.top = '0';
+                    textarea.style.opacity = '0';
+                    textarea.setAttribute('readonly', '');
+                    document.body.appendChild(textarea);
+                    textarea.focus();
+                    textarea.select();
+                    textarea.setSelectionRange(0, text.length);
+                    success = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                } catch (err) {
+                    console.error("execCommand fallback failed:", err);
+                }
+            }
+
+            if (success) {
                 const originalHtml = btn.innerHTML;
-                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg> 已复制`;
-                btn.classList.add('text-green-600', 'border-green-200', 'bg-green-50');
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-green-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg> <span class="text-green-600 font-bold">已复制</span>`;
+                btn.classList.add('text-green-600', 'border-green-300', 'bg-green-50');
                 setTimeout(() => {
                     btn.innerHTML = originalHtml;
-                    btn.classList.remove('text-green-600', 'border-green-200', 'bg-green-50');
+                    btn.classList.remove('text-green-600', 'border-green-300', 'bg-green-50');
                 }, 1500);
-            } catch (err) {
-                alert('复制失败');
+            } else {
+                prompt("自动复制受限，请长按下方文字手动复制：", text);
             }
         }
 
