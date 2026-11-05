@@ -157,46 +157,59 @@
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- 顶部导航栏 -->
-    <header class="bg-white shadow-sm border-b border-gray-200 z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 text-white p-2 rounded-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+    <header class="bg-white shadow-2xs border-b border-gray-200 z-10 sticky top-0">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+            <!-- 品牌标识与标题（响应式优化，手机端不折行、字号适度） -->
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
+                <div class="bg-blue-600 text-white p-1.5 sm:p-2 rounded-lg flex-shrink-0 shadow-2xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 w-6" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
-                <div>
-                    <h1 class="text-xl font-bold text-gray-800">天文卫星星历与寻星图工具</h1>
-                    <p class="text-xs text-gray-500">数据来源: SAI MSU</p>
+                <div class="min-w-0">
+                    <h1 class="text-[15px] sm:text-base md:text-lg lg:text-xl font-bold text-gray-800 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
+                        <span class="sm:hidden">卫星星历与寻星图</span>
+                        <span class="hidden sm:inline">天文卫星星历与寻星图工具</span>
+                    </h1>
+                    <p class="text-[10px] sm:text-xs text-gray-400 sm:text-gray-500 leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                        SAI MSU · STScI DSS
+                    </p>
                 </div>
             </div>
-            <div class="flex items-center gap-2.5">
+
+            <!-- 右侧快捷功能区（时钟、暗色、指南，手机端紧凑化） -->
+            <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
                 <div class="hidden md:flex text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1.5 rounded-lg font-medium items-center gap-1.5">
                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                     <span id="nightBadge">昆明站 2026-11-05 (第1夜)</span>
                 </div>
-                <div class="text-xs bg-gray-100 px-3 py-1.5 rounded-lg text-gray-600 font-mono flex items-center gap-2">
-                    <span class="w-2 h-2 inline-block bg-green-500 rounded-full animate-pulse"></span>
-                    UTC: <span id="utcClock">--:--:--</span>
+                <div class="text-[11px] sm:text-xs bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-gray-600 font-mono flex items-center gap-1.5" title="当前实时 UTC 时间">
+                    <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 inline-block bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
+                    <span class="hidden sm:inline text-gray-400">UTC:</span>
+                    <span id="utcClock" class="font-bold">--:--:--</span>
                 </div>
                 <!-- 夜间暗色模式切换 -->
                 <button onclick="toggleDarkMode()" id="darkModeBtn"
-                    class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition"
+                    class="flex items-center justify-center p-1.5 sm:px-2.5 sm:py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-md sm:rounded-lg transition"
                     title="切换夜间暗色观测模式">
-                    <span id="darkModeIcon">🌙</span> <span class="hidden sm:inline" id="darkModeText">夜间模式</span>
+                    <span id="darkModeIcon" class="text-sm">🌙</span>
+                    <span class="hidden sm:inline" id="darkModeText">暗色</span>
                 </button>
                 <button onclick="toggleModal('guideModal')"
-                    class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    class="flex items-center gap-1 p-1.5 sm:px-3 sm:py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs sm:text-sm font-medium rounded-md sm:rounded-lg transition"
+                    title="查看使用指南">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    使用指南
+                    <span class="hidden sm:inline">使用指南</span>
+                    <span class="sm:hidden text-xs">指南</span>
                 </button>
             </div>
+        </div>
     </header>
 
     <!-- 主内容区域 -->
@@ -227,7 +240,7 @@
                     <button id="submitBtn" onclick="submitCalculation()"
                         class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition flex justify-center items-center gap-2 shadow-sm hover:shadow active:scale-98 duration-150">
                         <div class="loader" id="btnLoader"></div>
-                        <span id="btnText">开始计算 (或微调后刷新)</span>
+                        <span id="btnText"><span class="sm:hidden">开始计算 / 刷新</span><span class="hidden sm:inline">开始计算 (或微调后刷新)</span></span>
                     </button>
                 </div>
 
@@ -392,7 +405,7 @@
                             </svg>
                             计算结果与高度角
                         </h2>
-                        <div id="targetSummaryHeader" class="text-xs text-gray-500 font-mono"></div>
+                        <div id="targetSummaryHeader" class="text-xs text-gray-500 font-mono hidden sm:block"></div>
                     </div>
                     <div id="resultCards" class="flex-1 overflow-auto">
                         <!-- 动态插入结果 -->
@@ -681,7 +694,7 @@
                 btn.disabled = false;
                 btn.classList.remove('opacity-75', 'cursor-not-allowed');
                 loader.style.display = 'none';
-                btnText.innerText = '开始计算';
+                btnText.innerHTML = '<span class="sm:hidden">开始计算 / 刷新</span><span class="hidden sm:inline">开始计算 (或微调后刷新)</span>';
             }
         }
 
