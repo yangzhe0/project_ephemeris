@@ -630,7 +630,7 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
         loc = EarthLocation(lat=station["lat"]*u.deg, lon=station["lon"]*u.deg, height=station["alt"]*u.m)
 
         # Sample every 3 minutes for 24 hours
-        minutes = np.arange(0, 24 * 60 + 1, 3)
+        minutes = np.arange(0, 24 * 60 + 1, 5)
         dt_list = [t_noon + timedelta(minutes=int(m)) for m in minutes]
         times = Time(dt_list)
         frame = AltAz(obstime=times, location=loc)
