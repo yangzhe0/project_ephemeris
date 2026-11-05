@@ -195,43 +195,79 @@
                 <div class="p-4 flex-1 overflow-y-auto space-y-4">
                     <form id="calcForm" class="space-y-4" onsubmit="event.preventDefault();submitCalculation();">
                         
-                        <!-- 目标天体（完全铺平展开，底色动态进度条显示剩余可观测时间） -->
+                        <!-- 目标天体 (MSU 编号原生触控下拉菜单) -->
                         <div>
-                            <div class="flex justify-between items-center mb-1.5">
-                                <label class="block text-xs font-semibold text-gray-700">目标天体 (点击直接切换计算)</label>
-                                <span class="text-[10px] text-gray-400">底色显示剩余可观测时长</span>
-                            </div>
-                            
-                            <!-- 10个目标平铺，无内部滚动条 -->
-                            <div class="grid grid-cols-2 gap-1.5 mb-2" id="satelliteButtonsContainer">
-                                {% for sat in satellites %}
-                                <label class="relative flex items-center justify-between px-2.5 py-2.5 rounded-lg border border-gray-200 bg-white cursor-pointer overflow-hidden transition select-none hover:border-blue-400 group"
-                                       data-sat-code="{{ sat.code }}" data-planet="{{ sat.planet }}" id="sat-label-{{ sat.code }}"
-                                       title="点击直接选中并自动更新">
-                                    <input type="radio" name="satellite" value="{{ sat.code }}" data-name="{{ sat.name.split(' ')[0] }}" class="peer sr-only"
-                                        onchange="onSelectSatellite('{{ sat.code }}')" {% if sat.code==default_satellite %}checked{% endif %}>
-                                    
-                                    <!-- 底色进度条背景（由 JS 动态每分钟刷新宽度和颜色） -->
-                                    <span class="obs-progress-bar absolute inset-y-0 left-0 bg-blue-100 transition-all duration-700 ease-out pointer-events-none" style="width: 100%;"></span>
-                                    
-                                    <!-- 按钮前景文字 -->
-                                    <div class="relative z-10 flex items-center justify-between w-full">
-                                        <span class="font-bold text-xs text-gray-800 tracking-wide sat-name group-hover:text-blue-600 transition-colors">{{ sat.name.split(' ')[0] }}</span>
-                                        <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-600 bg-white/80 shadow-xs backdrop-blur-xs sat-status-badge">--%</span>
-                                    </div>
-                                    
-                                    <!-- 选中状态高亮外边框 -->
-                                    <span class="absolute inset-0 rounded-lg border-2 border-transparent peer-checked:border-blue-600 peer-checked:shadow-sm pointer-events-none transition-all"></span>
-                                </label>
-                                {% endfor %}
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="satelliteSelect" class="block text-xs font-semibold text-gray-700">目标天体 (MSU 编号)</label>
+                                <span id="targetBadge" class="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">8001 海卫一</span>
                             </div>
 
-                            <!-- 自定义编号输入框 -->
-                            <div class="pt-1">
-                                <input type="text" id="customSatellite" placeholder="或输入 MSU 自然卫星代码 (回车直接计算)"
-                                    oninput="clearRadioSat()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();}"
-                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition bg-white">
+                            <!-- 当夜各主要行星系统可测窗口状态条（真实天体力学动态计算） -->
+                            <div class="grid grid-cols-4 gap-1 text-center text-[10px] font-mono mb-2" id="planetStatusBar" title="各行星系统当夜地平高度角 ≥30° 适测窗口">
+                                <div class="bg-gray-50 border border-gray-200 rounded px-1 py-1 text-gray-500 truncate" id="status-neptune">海王星 --</div>
+                                <div class="bg-gray-50 border border-gray-200 rounded px-1 py-1 text-gray-500 truncate" id="status-saturn">土星 --</div>
+                                <div class="bg-gray-50 border border-gray-200 rounded px-1 py-1 text-gray-500 truncate" id="status-uranus">天王星 --</div>
+                                <div class="bg-gray-50 border border-gray-200 rounded px-1 py-1 text-gray-500 truncate" id="status-jupiter">木星 --</div>
                             </div>
+
+                            <!-- 原生触控下拉菜单（桌面/手机双端完美兼容，一键即换即算） -->
+                            <select id="satelliteSelect" onchange="onSatelliteSelectChange()"
+                                class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-xs sm:text-sm font-medium text-gray-800 cursor-pointer shadow-2xs">
+                                <optgroup label="海王星天然卫星系统 (Neptune)">
+                                    <option value="8001" selected>8001 - N1 海卫一 (Triton / 第一优先级)</option>
+                                    <option value="8002">8002 - N2 海卫二 (Nereid)</option>
+                                    <option value="8000">8000 - 海王星本体中心 (Neptune Center)</option>
+                                </optgroup>
+                                <optgroup label="土星天然卫星系统 (Saturn)">
+                                    <option value="6008">6008 - S8 土卫八 (Iapetus)</option>
+                                    <option value="6009">6009 - S9 土卫九 (Phoebe)</option>
+                                    <option value="6001">6001 - S1~S7 内卫星群 (Mimas to Hyperion 同视场)</option>
+                                    <option value="6002">6002 - S2 土卫二 (Enceladus)</option>
+                                    <option value="6003">6003 - S3 土卫三 (Tethys)</option>
+                                    <option value="6004">6004 - S4 土卫四 (Dione)</option>
+                                    <option value="6005">6005 - S5 土卫五 (Rhea)</option>
+                                    <option value="6006">6006 - S6 土卫六 (Titan)</option>
+                                    <option value="6007">6007 - S7 土卫七 (Hyperion)</option>
+                                    <option value="6000">6000 - 土星本体中心 (Saturn Center)</option>
+                                </optgroup>
+                                <optgroup label="天王星天然卫星系统 (Uranus)">
+                                    <option value="7001">7001 - U1~U5 经典主卫星群 (Miranda to Oberon 同视场)</option>
+                                    <option value="7002">7002 - U2 天卫二 (Umbriel)</option>
+                                    <option value="7003">7003 - U3 天卫三 (Titania)</option>
+                                    <option value="7004">7004 - U4 天卫四 (Oberon)</option>
+                                    <option value="7005">7005 - U5 天卫五 (Miranda)</option>
+                                    <option value="7000">7000 - 天王星本体中心 (Uranus Center)</option>
+                                </optgroup>
+                                <optgroup label="木星天然卫星系统 (Jupiter)">
+                                    <option value="10001">10001 - J6 木卫六 (Himalia / 希玛利亚)</option>
+                                    <option value="10002">10002 - J7 木卫七 (Elara / 伊拉拉)</option>
+                                    <option value="10003">10003 - J8 木卫八 (Pasiphae / 帕西法厄)</option>
+                                    <option value="10004">10004 - J9 木卫九 (Sinope / 西诺珀)</option>
+                                    <option value="5001">5001 - J1 木卫一 (Io / 艾奥)</option>
+                                    <option value="5002">5002 - J2 木卫二 (Europa / 欧罗巴)</option>
+                                    <option value="5003">5003 - J3 木卫三 (Ganymede / 盖尼米德)</option>
+                                    <option value="5004">5004 - J4 木卫四 (Callisto / 卡利斯托)</option>
+                                    <option value="5000">5000 - 木星本体中心 (Jupiter Center)</option>
+                                </optgroup>
+                                <option value="custom">✏️ 手动输入其他 MSU 卫星代码...</option>
+                            </select>
+
+                            <!-- 自定义天体代码输入框（选中“手动输入”时展开） -->
+                            <div id="customSatWrapper" class="hidden mt-2">
+                                <div class="flex gap-2">
+                                    <input type="text" id="customSatelliteInput" placeholder="输入 4~5 位自然卫星数字代码 (如 5001, 8001 等)"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();applyCustomSatellite();}"
+                                        class="flex-1 border border-blue-300 rounded-lg p-2 text-xs font-mono bg-blue-50/30 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <button type="button" onclick="applyCustomSatellite()"
+                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs">
+                                        应用
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1">支持输入任意自然卫星数字代码，按回车或点击“应用”即可</p>
+                            </div>
+
+                            <!-- 存储当前实际卫星代码 -->
+                            <input type="hidden" id="satellite" value="8001">
                         </div>
 
                         <!-- 观测时间 (北京时间 +8) -->
@@ -480,43 +516,36 @@
                     stBadge.innerText = `${stCode} ${shortName}`;
                 }
 
-                // 2. 动态更新每个天体按钮的底色进度条和徽标
-                const labels = document.querySelectorAll('#satelliteButtonsContainer label[data-planet]');
-                labels.forEach(label => {
-                    const planet = label.getAttribute('data-planet');
-                    const pInfo = data.planets ? data.planets[planet] : null;
-                    const pBar = label.querySelector('.obs-progress-bar');
-                    const badge = label.querySelector('.sat-status-badge');
-                    if (!pInfo || !pBar || !badge) return;
-
-                    badge.innerText = pInfo.badge || '--%';
-                    label.title = pInfo.tooltip || '';
-
-                    if (pInfo.status === 'observing') {
-                        pBar.style.width = `${pInfo.pct}%`;
-                        if (pInfo.pct > 30) {
-                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-emerald-100/80 transition-all duration-700 ease-out pointer-events-none';
-                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-emerald-700 bg-white/90 shadow-xs sat-status-badge';
+                // 2. 更新各大行星可测窗口状态条（真实天体力学动态计算）
+                if (data.planets) {
+                    const pNames = { neptune: '海王星', saturn: '土星', uranus: '天王星', jupiter: '木星' };
+                    for (const [pKey, pLabel] of Object.entries(pNames)) {
+                        const el = document.getElementById(`status-${pKey}`);
+                        const pInfo = data.planets[pKey];
+                        if (!el || !pInfo) continue;
+                        if (pInfo.status === 'observing') {
+                            el.className = 'bg-emerald-50 border border-emerald-200 rounded px-1 py-1 text-emerald-700 font-bold truncate';
+                            el.innerText = `${pLabel} ${pInfo.badge}`;
+                            el.title = pInfo.tooltip || '';
+                        } else if (pInfo.status === 'waiting') {
+                            el.className = 'bg-blue-50 border border-blue-200 rounded px-1 py-1 text-blue-700 font-medium truncate';
+                            el.innerText = `${pLabel} ${pInfo.start}升`;
+                            el.title = pInfo.tooltip || '';
                         } else {
-                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-amber-100/90 transition-all duration-700 ease-out pointer-events-none';
-                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-amber-700 bg-white/90 shadow-xs sat-status-badge';
+                            el.className = 'bg-gray-50 border border-gray-200 rounded px-1 py-1 text-gray-400 truncate';
+                            el.innerText = `${pLabel} 无窗口`;
                         }
-                    } else if (pInfo.status === 'waiting') {
-                        pBar.style.width = '100%';
-                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-blue-50/70 border-r border-blue-200 transition-all duration-700 ease-out pointer-events-none';
-                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-blue-600 bg-blue-50/90 shadow-xs sat-status-badge';
-                    } else {
-                        pBar.style.width = '0%';
-                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-gray-100 transition-all duration-700 ease-out pointer-events-none';
-                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-400 bg-gray-100 shadow-xs sat-status-badge';
                     }
-                });
+                }
 
-                // 3. 初始载入时，根据天体力学实时结果自动勾选当前最适目标，并自动发起计算
+                // 3. 初始载入时，根据天体力学实时结果自动选择当前最适目标，并自动发起计算
                 if (isInitial && data.best_target) {
-                    const radio = document.querySelector(`input[name="satellite"][value="${data.best_target}"]`);
-                    if (radio) {
-                        radio.checked = true;
+                    const sel = document.getElementById('satelliteSelect');
+                    if (sel) {
+                        sel.value = data.best_target;
+                        const satHidden = document.getElementById('satellite');
+                        if (satHidden) satHidden.value = data.best_target;
+                        updateTargetBadge(data.best_target);
                     }
                     setTimeout(() => {
                         submitCalculation();
@@ -527,10 +556,48 @@
             }
         }
 
-        // --- 目标点选即自动切换计算 ---
-        function onSelectSatellite(code) {
-            clearCustomSat();
+        // --- 目标天体变更自动重算 ---
+        function onSatelliteSelectChange() {
+            const sel = document.getElementById('satelliteSelect');
+            const customWrapper = document.getElementById('customSatWrapper');
+            const customInput = document.getElementById('customSatelliteInput');
+            const satHidden = document.getElementById('satellite');
+
+            if (sel.value === 'custom') {
+                customWrapper.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customWrapper.classList.add('hidden');
+                satHidden.value = sel.value;
+                updateTargetBadge(sel.value);
+                submitCalculation();
+            }
+        }
+
+        function applyCustomSatellite() {
+            const customInput = document.getElementById('customSatelliteInput');
+            const satHidden = document.getElementById('satellite');
+            const val = customInput.value.trim();
+            if (!val || !/^\d+$/.test(val)) {
+                alert("请输入有效的自然卫星数字代码（如 5001, 8001 等）");
+                return;
+            }
+            satHidden.value = val;
+            updateTargetBadge(val);
             submitCalculation();
+        }
+
+        function updateTargetBadge(code) {
+            const badge = document.getElementById('targetBadge');
+            if (!badge) return;
+            const sel = document.getElementById('satelliteSelect');
+            if (sel && sel.value !== 'custom') {
+                const text = sel.options[sel.selectedIndex]?.text || code;
+                const namePart = text.split(' - ')[1]?.split(' (')[0] || code;
+                badge.innerText = `${code} ${namePart}`;
+            } else {
+                badge.innerText = `天体 ${code}`;
+            }
         }
 
         // --- 测站变更自动重算 ---
@@ -589,14 +656,7 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        // --- 自定义天体输入互斥逻辑 ---
-        function clearCustomSat() {
-            document.getElementById('customSatellite').value = '';
-        }
-        function clearRadioSat() {
-            const radios = document.querySelectorAll('input[name="satellite"]');
-            radios.forEach(r => r.checked = false);
-        }
+
 
         // 提交计算
         async function submitCalculation() {
@@ -611,14 +671,16 @@
 
             // 验证输入
             let satellite = '';
-            const satelliteInput = document.querySelector('input[name="satellite"]:checked');
-            const customInput = document.getElementById('customSatellite').value.trim();
+            const satHidden = document.getElementById('satellite');
+            const satSelect = document.getElementById('satelliteSelect');
+            const customInput = document.getElementById('customSatelliteInput');
 
-            // 优先使用自定义输入
-            if (customInput) {
-                satellite = customInput;
-            } else if (satelliteInput) {
-                satellite = satelliteInput.value;
+            if (satSelect && satSelect.value === 'custom' && customInput) {
+                satellite = customInput.value.trim();
+            } else if (satHidden && satHidden.value) {
+                satellite = satHidden.value.trim();
+            } else if (satSelect && satSelect.value) {
+                satellite = satSelect.value.trim();
             }
 
             if (!satellite) {
@@ -747,7 +809,8 @@
             }
 
             const first = data[0];
-            const tName = targetInfo?.name || `天体 ${document.querySelector('input[name="satellite"]:checked')?.value || ''}`;
+            const satCode = first.satellite || document.getElementById('satellite')?.value || '';
+            const tName = targetInfo?.name || `天体 ${satCode}`;
             const diameter = first.diameter || targetInfo?.diameter || '--';
             const angularSize = first.angular_size || targetInfo?.angular_size || '--';
             const mag = first.mag || targetInfo?.mag || '--';
@@ -935,15 +998,14 @@
             // 获取卫星名称
             let satelliteName = satelliteNameOverride;
             if (!satelliteName) {
-                const satelliteInput = document.querySelector('input[name="satellite"]:checked');
-                const customInput = document.getElementById('customSatellite').value.trim();
-
-                if (customInput) {
-                    satelliteName = customInput;
-                } else if (satelliteInput && satelliteInput.nextElementSibling) {
-                    satelliteName = satelliteInput.nextElementSibling.innerText;
+                const satSelect = document.getElementById('satelliteSelect');
+                if (satSelect && satSelect.value !== 'custom') {
+                    const opt = satSelect.options[satSelect.selectedIndex];
+                    satelliteName = opt ? opt.text.split(' - ')[1]?.split(' (')[0] || opt.text : satSelect.value;
+                } else if (document.getElementById('customSatelliteInput')) {
+                    satelliteName = document.getElementById('customSatelliteInput').value.trim() || 'Target';
                 } else {
-                    satelliteName = "Unknown";
+                    satelliteName = currentTargetInfo?.name || "Target";
                 }
             }
 
@@ -1064,11 +1126,11 @@
             </div>
             <div class="p-6 sm:p-8 overflow-y-auto prose text-sm text-gray-600 space-y-4">
                 <div>
-                    <h4 class="font-bold text-gray-900 text-base mb-2">1. 目标选择与实时状态</h4>
+                    <h4 class="font-bold text-gray-900 text-base mb-2">1. 目标天体 (MSU 编号) 原生下拉</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>预设天体一键切换</strong>：左侧铺平排列海王星（海卫一/二）、土星（土卫一~九）、天王星（天卫一~五）、木星（木卫一~九）等自然卫星目标，<strong>点击任意目标即自动刷新计算与寻星图</strong>。</li>
-                        <li><strong>动态观测进度条</strong>：每个天体按钮底色实时展示当夜该天体在当前测站的可观测剩余时间（绿色 ≥30% 适测，橙色 &lt;30% 抓紧观测，蓝色等待升起，灰色无窗口）。</li>
-                        <li><strong>自定义天体代码</strong>：支持在输入框输入任意 MSU 自然卫星代码（例如 <code>5001</code> 木卫一，<code>8001</code> 海卫一等），按回车直接计算。</li>
+                        <li><strong>分类收录常用自然卫星</strong>：采用原生触控下拉菜单，按海王星、土星、天王星、木星系统清晰分组收录所有常用自然卫星及本体中心编号，<strong>切换任一目标即刻自动发起计算并更新寻星图</strong>。</li>
+                        <li><strong>各大行星可测窗口指示</strong>：下拉菜单上方状态栏实时显示各大行星系统当夜在当前台站的地平高度角 ≥30° 适测时间（如 <code>海王星 适测</code>、<code>木星 03:48升</code>）。</li>
+                        <li><strong>自定义天体代码输入</strong>：在下拉菜单最后一项选择“✏️ 手动输入其他 MSU 卫星代码...”，即可展开输入框输入任意自然卫星数字代码（如 <code>5001</code>、<code>8001</code> 等）计算。</li>
                     </ul>
                 </div>
 
