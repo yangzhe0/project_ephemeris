@@ -218,9 +218,19 @@ def _load_observatories() -> dict[str, dict[str, Any]]:
 
 OBSERVATORIES = _load_observatories()
 
+def normalize_obs_code(raw_code: str) -> str:
+    """Extract standard observatory code from raw string or labeled option."""
+    s = str(raw_code or "").strip()
+    m = re.search(r"\[?([A-Za-z0-9]{1,6})\]?", s)
+    if m:
+        return m.group(1).upper()
+    return s[:16] or "286"
+
+
 def get_observatory(obs_code: str) -> dict[str, Any]:
-    code = str(obs_code).strip()
-    for k in [code, code.upper(), code.zfill(3)]:
+    raw = str(obs_code).strip()
+    norm = normalize_obs_code(raw)
+    for k in [norm, norm.upper(), norm.zfill(3), raw, raw.upper()]:
         if k in OBSERVATORIES:
             data = OBSERVATORIES[k]
             return {
@@ -231,8 +241,8 @@ def get_observatory(obs_code: str) -> dict[str, Any]:
                 "alt": float(data.get("alt", 0.0)),
             }
     return {
-        "code": code or "286",
-        "name": f"自定义台站 ({code})" if code else "云南天文台昆明 1m望远镜",
+        "code": norm or "286",
+        "name": f"自定义台站 ({norm})" if norm else "云南天文台昆明 1m望远镜",
         "lat": 25.0294,
         "lon": 102.7883,
         "alt": 2000.0,
@@ -423,6 +433,7 @@ def parse_ephemeris(pre_content: str, observatory: str = "286", satellite: str =
 
 
 def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, timestep):
+    observatory = normalize_obs_code(observatory)
     payload = {
         "langue": "30", "plnvar": plnvar, "satellite": satellite,
         "relative": "-1", "nde": nde, "observatory": observatory,
@@ -443,11 +454,37 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
 
     soup = BeautifulSoup(response.text, "html.parser")
     pre_tag = soup.find("pre")
+    pre_content = pre_tag.get_text() if pre_tag else ""
+    page_title = soup.title.get_text(strip=True) if soup.title else ""
+
+    # 若 MSU 历史内置台站表中未收录该台站代码（如近年设立的 O07 丽江 2.4m 等）
+    # 自动以 500 (地心坐标) 获取该天体天球坐标，本地再基于所选测站的精确经纬度与海拔推算高度角与晨昏窗口
+    if "not found in the observatory list" in pre_content.lower():
+        fallback_payload = dict(payload)
+        fallback_payload["observatory"] = "500"
+        try:
+            fb_response = requests.post(
+                MSU_URL, data=fallback_payload, headers=REQUEST_HEADERS, timeout=(12, 30)
+            )
+            fb_response.raise_for_status()
+            fb_soup = BeautifulSoup(fb_response.text, "html.parser")
+            fb_pre = fb_soup.find("pre")
+            if fb_pre and "not found in the observatory list" not in fb_pre.get_text().lower():
+                pre_tag = fb_pre
+                pre_content = fb_pre.get_text()
+                page_title = fb_soup.title.get_text(strip=True) if fb_soup.title else ""
+        except Exception:
+            pass
+
     if not pre_tag:
         return {"success": False, "message": "星历服务器未返回预期的数据格式"}
-    pre_content = pre_tag.get_text()
-    page_title = soup.title.get_text(strip=True) if soup.title else ""
-    if "error" in page_title.lower():
+
+    if "error" in page_title.lower() or "error is discovered" in pre_content.lower():
+        if "not found in the observatory list" in pre_content.lower():
+            return {
+                "success": False,
+                "message": f"MSU 星历服务器未收录测站代码 {observatory}，且地心回退失败，请核对测站代码",
+            }
         return {
             "success": False,
             "message": (
@@ -455,6 +492,7 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
                 "请输入该自然卫星服务的代码，例如 5001（木卫一）；通用月球代码 301 不适用"
             ),
         }
+
     results = parse_ephemeris(pre_content, observatory=observatory, satellite=satellite)
     if not results:
         return {"success": False, "message": "未从星历服务器返回内容中解析到数据"}
@@ -493,7 +531,8 @@ def calculate():
         return _json_error("请求体必须是 JSON 对象")
 
     satellite = str(data.get("satellite", "")).strip()
-    observatory = str(data.get("observatory", "")).strip()
+    raw_obs = str(data.get("observatory", "")).strip()
+    observatory = normalize_obs_code(raw_obs)
     initmom = " ".join(str(data.get("initmom", "")).split())
     if not re.fullmatch(r"\d{1,10}", satellite):
         return _json_error("天体代码必须是 1 到 10 位数字")
@@ -702,7 +741,7 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
 
 @app.route("/api/observation_status")
 def observation_status():
-    obs = request.args.get("obs", "286")
+    obs = normalize_obs_code(request.args.get("obs", "286"))
     time_str = request.args.get("time", "").strip()
     bjt_dt = None
     if time_str:

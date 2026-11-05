@@ -227,6 +227,46 @@ class EphemerisTests(unittest.TestCase):
         self.assertIn("alt_str", rows[0])
         self.assertIn("云南天文台昆明", rows[0]["station_name"])
 
+    def test_normalize_obs_code(self):
+        self.assertEqual(ephemeris.normalize_obs_code("286"), "286")
+        self.assertEqual(ephemeris.normalize_obs_code("O07"), "O07")
+        self.assertEqual(ephemeris.normalize_obs_code("o07"), "O07")
+        self.assertEqual(ephemeris.normalize_obs_code("[O07] 丽江高美古 2.4m望远镜"), "O07")
+        self.assertEqual(ephemeris.normalize_obs_code("327 - 兴隆观测基地"), "327")
+        self.assertEqual(ephemeris.normalize_obs_code("500"), "500")
+
+    @patch("app.requests.post")
+    def test_fetch_satellite_data_unlisted_observatory_fallback(self, post):
+        resp_err = MagicMock()
+        resp_err.text = "<html><head><title>NatSatEphemOutput - Error</title></head><body><pre>Observatory number O07 is not found in the observatory list</pre></body></html>"
+        resp_err.raise_for_status.return_value = None
+
+        resp_ok = MagicMock()
+        resp_ok.text = f"<html><head><title>NatSatEphemOutput</title></head><body><pre>{SAMPLE_TRITON_PRE}</pre></body></html>"
+        resp_ok.raise_for_status.return_value = None
+
+        post.side_effect = [resp_err, resp_ok]
+
+        res = ephemeris.fetch_satellite_data("0", "8001", "6", "O07", "2026 11 05 12 00 00", "1", "1")
+        self.assertTrue(res["success"])
+        self.assertEqual(res["station"]["code"], "O07")
+        self.assertIn("丽江", res["station"]["name"])
+        self.assertEqual(len(res["data"]), 2)
+        self.assertIn("丽江", res["data"][0]["station_name"])
+
+    def test_calculate_api_accepts_bracketed_and_labeled_observatory(self):
+        with patch("app.fetch_satellite_data") as mock_fetch:
+            mock_fetch.return_value = {"success": True, "data": [], "station": {"code": "O07", "name": "丽江"}}
+            res = self.client.post("/api/calculate", json={
+                "satellite": "8001",
+                "observatory": "[O07] 丽江高美古 2.4m望远镜",
+                "initmom": "2026 11 05 12 00 00",
+            })
+            self.assertEqual(res.status_code, 200)
+            mock_fetch.assert_called_once()
+            call_args = mock_fetch.call_args[0]
+            self.assertEqual(call_args[3], "O07")
+
 
 if __name__ == "__main__":
     unittest.main()

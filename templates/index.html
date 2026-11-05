@@ -135,9 +135,9 @@
 
             <!-- 右侧快捷功能区（时钟、暗色、指南，手机端紧凑化） -->
             <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
-                <div class="hidden md:flex text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1.5 rounded-lg font-medium items-center gap-1.5">
-                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                    <span id="nightBadge">昆明站 2026-11-05 (第1夜)</span>
+                <div class="flex text-[11px] sm:text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg font-medium items-center gap-1 sm:gap-1.5 flex-shrink max-w-[170px] sm:max-w-none" title="当前所选测站暗夜可测时间窗口">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 animate-pulse"></span>
+                    <span id="nightBadge" class="truncate font-mono">[286] 暗夜 19:45 ~ 06:00</span>
                 </div>
                 <div class="text-[11px] sm:text-xs bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-gray-600 font-mono flex items-center gap-1.5" title="当前实时 UTC 时间">
                     <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 inline-block bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
@@ -251,31 +251,54 @@
                         <!-- 观测站 -->
                         <div>
                             <div class="flex justify-between items-center mb-1">
-                                <label class="block text-xs font-semibold text-gray-700">观测站代码 (Observatory)</label>
-                                <span class="text-[10px] text-gray-400">支持全球 1400+ IAU/MPC 测站</span>
+                                <label for="observatorySelect" class="block text-xs font-semibold text-gray-700">观测台站 (Observatory)</label>
+                                <span id="currentStationBadge" class="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">286 云南台</span>
                             </div>
-                            <input list="obsOptions" type="text" id="observatory" value="286" placeholder="输入代码或名称 (如 286, O07, 327, 500)"
-                                onchange="onObservatoryChange()" onkeydown="if(event.key==='Enter'){event.preventDefault();onObservatoryChange();}"
-                                class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-sm font-mono">
-                            <datalist id="obsOptions">
-                                <option value="286">286 - 云南天文台昆明 1m望远镜 (Yunnan Obs.)</option>
-                                <option value="O07">O07 - 丽江高美古 2.4m望远镜 (Lijiang 2.4m)</option>
-                                <option value="327">327 - 兴隆观测基地 2.16m望远镜 (Xinglong Obs.)</option>
-                                <option value="330">330 - 紫金山天文台 (Purple Mountain Obs.)</option>
-                                <option value="D29">D29 - 盱眙观测站 (XuYi Station)</option>
-                                <option value="337">337 - 佘山天文台 1.56m (Sheshan Obs.)</option>
-                                <option value="C42">C42 - 南山观测站 (Nanshan Obs.)</option>
-                                <option value="D39">D39 - 威海观测站 1m (Weihai Obs.)</option>
-                                <option value="500">500 - 地心坐标 (Geocentric)</option>
-                                <option value="000">000 - 皇家格林尼治天文台 (Greenwich)</option>
-                                <option value="568">568 - 莫纳克亚山 (Mauna Kea)</option>
-                                <option value="809">809 - 欧洲南方天文台拉西拉 (La Silla)</option>
-                                <option value="309">309 - 帕洛马山 (Palomar Mountain)</option>
-                                <option value="675">675 - 托洛洛山 (CTIO)</option>
-                            </datalist>
+
+                            <!-- 原生触控下拉菜单（桌面/手机双端完美兼容，一键即换即算） -->
+                            <select id="observatorySelect" onchange="onObservatorySelectChange()"
+                                class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-xs sm:text-sm font-medium text-gray-800 cursor-pointer shadow-2xs">
+                                <optgroup label="国内主要天文台站">
+                                    <option value="286" selected>[286] 云南天文台昆明 1m望远镜 (云南昆明)</option>
+                                    <option value="O07">[O07] 丽江高美古 2.4m望远镜 (云南丽江)</option>
+                                    <option value="327">[327] 国家天文台兴隆基地 2.16m (河北兴隆)</option>
+                                    <option value="330">[330] 紫金山天文台 (江苏南京)</option>
+                                    <option value="D29">[D29] 紫金山天文台盱眙观测站 (江苏盱眙)</option>
+                                    <option value="337">[337] 佘山天文台 1.56m望远镜 (上海佘山)</option>
+                                    <option value="C42">[C42] 新疆天文台南山观测站 (新疆南山)</option>
+                                    <option value="D39">[D39] 山东大学威海天文台 1m (山东威海)</option>
+                                </optgroup>
+                                <optgroup label="地心与国际经典台站">
+                                    <option value="500">[500] 地心坐标 (Geocentric / 全天无地平)</option>
+                                    <option value="000">[000] 皇家格林尼治天文台 (Greenwich)</option>
+                                    <option value="568">[568] 夏威夷莫纳克亚山 (Mauna Kea)</option>
+                                    <option value="809">[809] 欧洲南方天文台拉西拉 (La Silla)</option>
+                                    <option value="309">[309] 帕洛马山天文台 (Palomar Mountain)</option>
+                                    <option value="675">[675] 智利托洛洛山美洲际天文台 (CTIO)</option>
+                                </optgroup>
+                                <option value="custom">✏️ 手动输入其他台站代码 (支持全球 1400+ MPC 测站)...</option>
+                            </select>
+
+                            <!-- 自定义测站输入框（选中“手动输入”时显示） -->
+                            <div id="customObsWrapper" class="hidden mt-2">
+                                <div class="flex gap-2">
+                                    <input type="text" id="customObsInput" placeholder="输入 3 位 IAU/MPC 测站代码 (如 010, 046, 290 等)"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();applyCustomObservatory();}"
+                                        class="flex-1 border border-blue-300 rounded-lg p-2 text-xs font-mono uppercase bg-blue-50/30 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <button type="button" onclick="applyCustomObservatory()"
+                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs">
+                                        应用
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1">支持全球 1400+ MPC 台站，按回车或点击应用即可</p>
+                            </div>
+
+                            <!-- 存储当前实际测站代码 -->
+                            <input type="hidden" id="observatory" value="286">
+
                             <p class="text-[10px] text-gray-400 mt-1 flex items-center justify-between">
-                                <span>默认 286 (云南台)。切换测站自动重算</span>
-                                <span id="currentStationBadge" class="text-blue-600 font-mono font-medium truncate max-w-[180px]">云南台 (286)</span>
+                                <span>切换台站即自动更新当夜暗夜时刻与高度角</span>
+                                <span class="text-emerald-600 font-medium">即选即算</span>
                             </p>
                         </div>
 
@@ -432,16 +455,29 @@
                 const data = await res.json();
                 if (!data || !data.success) return;
 
-                // 1. 更新顶部当夜状态指示徽标与测站徽标
+                // 1. 更新顶部当夜状态指示徽标与测站徽标（按台站编号显示）
                 const nightBadge = document.getElementById('nightBadge');
-                if (nightBadge && data.station && data.twilight) {
-                    const stName = (data.station.name || '昆明站').split(' ')[0];
-                    nightBadge.innerText = `${stName} ${data.night_date} (暗夜 ${data.twilight.dusk} ~ ${data.twilight.dawn})`;
+                if (nightBadge && data.station) {
+                    const stCode = data.station.code || obs;
+                    const rawName = (data.station.name || '').split(' ')[0];
+                    const shortName = rawName.replace(/天文台|观测站|望远镜/g, '');
+                    const namePart = shortName ? ` ${shortName}` : '';
+
+                    if (stCode === '500') {
+                        nightBadge.innerText = `[500] 全天无地平`;
+                        nightBadge.parentElement.title = `地心坐标 (500) · 全天无地平限制`;
+                    } else if (data.twilight && data.twilight.dusk && data.twilight.dusk !== '--:--') {
+                        nightBadge.innerText = `[${stCode}${namePart}] 暗夜 ${data.twilight.dusk} ~ ${data.twilight.dawn}`;
+                        nightBadge.parentElement.title = `测站 [${stCode}] ${data.station.name || ''} · ${data.night_date} 暗夜时刻: ${data.twilight.dusk} ~ ${data.twilight.dawn}`;
+                    } else {
+                        nightBadge.innerText = `[${stCode}${namePart}] 暗夜数据计算中...`;
+                    }
                 }
                 const stBadge = document.getElementById('currentStationBadge');
                 if (stBadge && data.station) {
-                    const shortName = (data.station.name || data.station.code || '').split(' ')[0];
-                    stBadge.innerText = `${shortName} (${data.station.code || obs})`;
+                    const stCode = data.station.code || obs;
+                    const shortName = (data.station.name || '').split(' ')[0];
+                    stBadge.innerText = `${stCode} ${shortName}`;
                 }
 
                 // 2. 动态更新每个天体按钮的底色进度条和徽标
@@ -498,6 +534,34 @@
         }
 
         // --- 测站变更自动重算 ---
+        function onObservatorySelectChange() {
+            const sel = document.getElementById('observatorySelect');
+            const customWrapper = document.getElementById('customObsWrapper');
+            const customInput = document.getElementById('customObsInput');
+            const obsHidden = document.getElementById('observatory');
+
+            if (sel.value === 'custom') {
+                customWrapper.classList.remove('hidden');
+                customInput.focus();
+            } else {
+                customWrapper.classList.add('hidden');
+                obsHidden.value = sel.value;
+                onObservatoryChange();
+            }
+        }
+
+        function applyCustomObservatory() {
+            const customInput = document.getElementById('customObsInput');
+            const obsHidden = document.getElementById('observatory');
+            const val = customInput.value.trim().toUpperCase();
+            if (!val) {
+                alert("请输入测站代码");
+                return;
+            }
+            obsHidden.value = val;
+            onObservatoryChange();
+        }
+
         function onObservatoryChange() {
             updateObservationProgress(false);
             submitCalculation();
