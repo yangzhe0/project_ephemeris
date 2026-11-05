@@ -104,52 +104,6 @@
         }
 
 
-        /* 夜间天文暗色模式 */
-        body.dark-mode {
-            background-color: #0b0f19;
-            color: #e5e7eb;
-        }
-        body.dark-mode header {
-            background-color: #111827;
-            border-color: #1f2937;
-        }
-        body.dark-mode header h1 {
-            color: #f3f4f6;
-        }
-        body.dark-mode .bg-white {
-            background-color: #111827 !important;
-            border-color: #1f2937 !important;
-            color: #e5e7eb;
-        }
-        body.dark-mode .bg-gray-50 {
-            background-color: #1a2234 !important;
-            border-color: #1f2937 !important;
-            color: #9ca3af;
-        }
-        body.dark-mode .text-gray-800, body.dark-mode .text-gray-700 {
-            color: #f3f4f6 !important;
-        }
-        body.dark-mode .text-gray-600, body.dark-mode .text-gray-500 {
-            color: #9ca3af !important;
-        }
-        body.dark-mode input, body.dark-mode select {
-            background-color: #1f2937 !important;
-            border-color: #374151 !important;
-            color: #f9fafb !important;
-        }
-        body.dark-mode .border-gray-200, body.dark-mode .border-gray-300 {
-            border-color: #2e384d !important;
-        }
-        body.dark-mode .obs-progress-bar {
-            background-color: rgba(16, 185, 129, 0.25) !important;
-        }
-        body.dark-mode .sat-status-badge {
-            background-color: rgba(31, 41, 55, 0.9) !important;
-            color: #34d399 !important;
-        }
-        body.dark-mode tr:hover {
-            background-color: rgba(59, 130, 246, 0.15) !important;
-        }
 
     </style>
 </head>
@@ -157,7 +111,7 @@
 <body class="bg-gray-100 min-h-screen flex flex-col">
 
     <!-- 顶部导航栏 -->
-    <header class="bg-white shadow-2xs border-b border-gray-200 z-10 sticky top-0">
+    <header class="bg-white shadow-2xs border-b border-gray-200 z-10">
         <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
             <!-- 品牌标识与标题（响应式优化，手机端不折行、字号适度） -->
             <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
@@ -190,13 +144,6 @@
                     <span class="hidden sm:inline text-gray-400">UTC:</span>
                     <span id="utcClock" class="font-bold">--:--:--</span>
                 </div>
-                <!-- 夜间暗色模式切换 -->
-                <button onclick="toggleDarkMode()" id="darkModeBtn"
-                    class="flex items-center justify-center p-1.5 sm:px-2.5 sm:py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-md sm:rounded-lg transition"
-                    title="切换夜间暗色观测模式">
-                    <span id="darkModeIcon" class="text-sm">🌙</span>
-                    <span class="hidden sm:inline" id="darkModeText">暗色</span>
-                </button>
                 <button onclick="toggleModal('guideModal')"
                     class="flex items-center gap-1 p-1.5 sm:px-3 sm:py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs sm:text-sm font-medium rounded-md sm:rounded-lg transition"
                     title="查看使用指南">
@@ -303,10 +250,33 @@
 
                         <!-- 观测站 -->
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">观测站代码 (Observatory)</label>
-                            <input type="text" id="observatory" value="286" placeholder="例如: 286, 500"
-                                class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-sm">
-                            <p class="text-[10px] text-gray-400 mt-1">默认: 286 (Yunnan Observatory 1m). 地心坐标: 500.</p>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-xs font-semibold text-gray-700">观测站代码 (Observatory)</label>
+                                <span class="text-[10px] text-gray-400">支持全球 1400+ IAU/MPC 测站</span>
+                            </div>
+                            <input list="obsOptions" type="text" id="observatory" value="286" placeholder="输入代码或名称 (如 286, O07, 327, 500)"
+                                onchange="onObservatoryChange()" onkeydown="if(event.key==='Enter'){event.preventDefault();onObservatoryChange();}"
+                                class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-sm font-mono">
+                            <datalist id="obsOptions">
+                                <option value="286">286 - 云南天文台昆明 1m望远镜 (Yunnan Obs.)</option>
+                                <option value="O07">O07 - 丽江高美古 2.4m望远镜 (Lijiang 2.4m)</option>
+                                <option value="327">327 - 兴隆观测基地 2.16m望远镜 (Xinglong Obs.)</option>
+                                <option value="330">330 - 紫金山天文台 (Purple Mountain Obs.)</option>
+                                <option value="D29">D29 - 盱眙观测站 (XuYi Station)</option>
+                                <option value="337">337 - 佘山天文台 1.56m (Sheshan Obs.)</option>
+                                <option value="C42">C42 - 南山观测站 (Nanshan Obs.)</option>
+                                <option value="D39">D39 - 威海观测站 1m (Weihai Obs.)</option>
+                                <option value="500">500 - 地心坐标 (Geocentric)</option>
+                                <option value="000">000 - 皇家格林尼治天文台 (Greenwich)</option>
+                                <option value="568">568 - 莫纳克亚山 (Mauna Kea)</option>
+                                <option value="809">809 - 欧洲南方天文台拉西拉 (La Silla)</option>
+                                <option value="309">309 - 帕洛马山 (Palomar Mountain)</option>
+                                <option value="675">675 - 托洛洛山 (CTIO)</option>
+                            </datalist>
+                            <p class="text-[10px] text-gray-400 mt-1 flex items-center justify-between">
+                                <span>默认 286 (云南台)。切换测站自动重算</span>
+                                <span id="currentStationBadge" class="text-blue-600 font-mono font-medium truncate max-w-[180px]">云南台 (286)</span>
+                            </p>
                         </div>
 
                         <!-- 高级参数（平时不经常用到，默认折叠，可按需微调） -->
@@ -462,11 +432,16 @@
                 const data = await res.json();
                 if (!data || !data.success) return;
 
-                // 1. 更新顶部当夜状态指示徽标
+                // 1. 更新顶部当夜状态指示徽标与测站徽标
                 const nightBadge = document.getElementById('nightBadge');
                 if (nightBadge && data.station && data.twilight) {
                     const stName = (data.station.name || '昆明站').split(' ')[0];
                     nightBadge.innerText = `${stName} ${data.night_date} (暗夜 ${data.twilight.dusk} ~ ${data.twilight.dawn})`;
+                }
+                const stBadge = document.getElementById('currentStationBadge');
+                if (stBadge && data.station) {
+                    const shortName = (data.station.name || data.station.code || '').split(' ')[0];
+                    stBadge.innerText = `${shortName} (${data.station.code || obs})`;
                 }
 
                 // 2. 动态更新每个天体按钮的底色进度条和徽标
@@ -522,18 +497,10 @@
             submitCalculation();
         }
 
-        // --- 暗色观测模式切换 ---
-        function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-            const isDark = document.body.classList.contains('dark-mode');
-            localStorage.setItem('project_ephemeris_dark', isDark ? '1' : '0');
-            const icon = document.getElementById('darkModeIcon');
-            const txt = document.getElementById('darkModeText');
-            if (icon) icon.innerText = isDark ? '☀️' : '🌙';
-            if (txt) txt.innerText = isDark ? '明亮模式' : '夜间模式';
-        }
-        if (localStorage.getItem('project_ephemeris_dark') === '1') {
-            document.body.classList.add('dark-mode');
+        // --- 测站变更自动重算 ---
+        function onObservatoryChange() {
+            updateObservationProgress(false);
+            submitCalculation();
         }
 
         // 页面初始化：调用后端天体力学动态计算，并启动每分钟(60秒)自动刷新
@@ -720,12 +687,21 @@
             const diameter = first.diameter || targetInfo?.diameter || '--';
             const angularSize = first.angular_size || targetInfo?.angular_size || '--';
             const mag = first.mag || targetInfo?.mag || '--';
-            const stName = first.station_name || station?.name || '云南天文台昆明 1m望远镜';
+            const currentObsInput = (document.getElementById('observatory').value || '286').trim();
+            const stCode = first.station_code || station?.code || currentObsInput;
+            const stName = first.station_name || station?.name || `测站 ${stCode}`;
+
+            // 更新左侧测站徽标
+            const stBadge = document.getElementById('currentStationBadge');
+            if (stBadge) {
+                const shortName = stName.split(' ')[0];
+                stBadge.innerText = `${shortName} (${stCode})`;
+            }
 
             // 顶部精简摘要
             const summaryHeader = document.getElementById('targetSummaryHeader');
             if (summaryHeader) {
-                summaryHeader.innerHTML = `<span>高度角: <strong class="${first.is_observable ? 'text-emerald-600' : 'text-amber-600'}">${first.alt_str}</strong></span> | <span>直径: <strong>${diameter}</strong></span>`;
+                summaryHeader.innerHTML = `<span>高度角 (${stCode}): <strong class="${first.is_observable ? 'text-emerald-600' : 'text-amber-600'}">${first.alt_str}</strong></span> | <span>直径: <strong>${diameter}</strong></span>`;
             }
 
             // 目标详细状态横幅
@@ -736,9 +712,9 @@
                         ${mag !== '--' ? `<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold text-[11px]">星等 ${mag}</span>` : ''}
                     </div>
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-600">
-                        <div><span class="text-gray-400">测站:</span> <span class="font-medium text-gray-800">${stName}</span></div>
+                        <div><span class="text-gray-400">测站:</span> <span class="font-medium text-gray-800">${stName} (${stCode})</span></div>
                         <div>
-                            <span class="text-gray-400">云南台高度角:</span>
+                            <span class="text-gray-400">高度角:</span>
                             <span class="font-bold font-mono text-sm ${first.is_observable ? 'text-emerald-700' : (first.alt_deg >= 0 ? 'text-amber-700' : 'text-gray-500')}">${first.alt_str}</span>
                             <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${first.is_observable ? 'bg-emerald-100 text-emerald-800' : (first.alt_deg >= 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600')}">${first.status_text || (first.is_observable ? '适测 ≥30°' : '低空')}</span>
                         </div>
@@ -755,7 +731,7 @@
                         <thead class="bg-gray-50 text-gray-600 text-xs uppercase sticky top-0">
                             <tr>
                                 <th class="px-3 py-2 font-semibold border-b">时间 (UTC)</th>
-                                <th class="px-3 py-2 font-semibold border-b text-center">高度角 (云南台)</th>
+                                <th class="px-3 py-2 font-semibold border-b text-center">高度角 (${stCode})</th>
                                 <th class="px-3 py-2 font-semibold border-b">赤经 (R.A.)</th>
                                 <th class="px-3 py-2 font-semibold border-b">赤纬 (Dec.)</th>
                                 <th class="px-3 py-2 font-semibold border-b text-center">天体直径 (视直径)</th>
@@ -938,7 +914,10 @@
                             </div>
                             <div class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2.5 py-1 rounded pointer-events-none flex items-center gap-2 font-mono">
                                 <span>FOV: ${fov}'</span>
-                                ${item.alt_str ? `<span class="text-emerald-400">| 云南台: ${item.alt_str}</span>` : ''}
+                                ${(() => {
+                                    const cObs = (document.getElementById('observatory').value || '286').trim();
+                                    return item.alt_str ? `<span class="text-emerald-400">| ${cObs}高度: ${item.alt_str}</span>` : '';
+                                })()}
                             </div>
                         </div>
                     `;
@@ -1026,9 +1005,7 @@
             <div class="p-8 overflow-y-auto prose text-sm text-gray-600">
                 <h4>1. 基本设置</h4>
                 <ul class="list-disc pl-5 space-y-2">
-                    <li><strong>观测站 (Observatory)</strong>: 输入观测站代码,默认为 <code>286</code> (云南天文台 1m)。地心坐标可填
-                        <code>500</code>。
-                    </li>
+                    <li><strong>观测站 (Observatory)</strong>: 支持全球 1400+ IAU/MPC 观测站代码，默认 <code>286</code> (云南台 1m)。可快捷选择或输入 <code>O07</code> (丽江 2.4m)、<code>327</code> (兴隆 2.16m)、<code>330</code> (紫金山)、<code>500</code> (地心) 等，系统自动计算目标相对于该台站的实时高度角与可视时间窗口。</li>
                     <li><strong>目标天体 (Object)</strong>: 选择要查询的卫星,如 S0 (Saturn Center), J6 (Himalia)
                         等。也可以输入 MSU 自然卫星代码,如 <code>5001</code> (木卫一)。本接口不支持通用月球代码 <code>301</code>。</li>
                     <li><strong>观测时间</strong>: 支持输入<strong>北京时间 (+8)</strong>,系统会自动转换为 UTC 发送给后端。留空则自动使用当前 UTC 时间。</li>

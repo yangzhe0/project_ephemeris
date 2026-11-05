@@ -68,18 +68,19 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(rows[0]["de_pure"], "-23 45 01.2")
 
     def test_parse_ephemeris_near_equator_negative_dec(self):
-        """Regression test for Triton N1 negative Dec where degree is 0 or -0 and minus is on minutes."""
+        """Regression test for Triton N1 negative Dec where degree is 0 or -0 and zero-padded to 2 digits."""
         rows = ephemeris.parse_ephemeris(SAMPLE_TRITON_PRE)
         self.assertEqual(len(rows), 2)
-        # First row: "0 -39 24.875698" -> "-0 39 24.875698"
+        # First row: "0 -39 24.875698" -> "00 08 10.224206" and "-00 39 24.875698"
         self.assertEqual(rows[0]["time"], "2026-11-05 12:00:00")
-        self.assertEqual(rows[0]["ra_pure"], "0 8 10.224206")
-        self.assertEqual(rows[0]["de_pure"], "-0 39 24.875698")
-        self.assertEqual(rows[0]["de"], "-0° 39' 24.875698\"")
+        self.assertEqual(rows[0]["ra_pure"], "00 08 10.224206")
+        self.assertEqual(rows[0]["de_pure"], "-00 39 24.875698")
+        self.assertEqual(rows[0]["ra"], "00h 08m 10.224206s")
+        self.assertEqual(rows[0]["de"], "-00° 39' 24.875698\"")
 
-        # Second row: "-0 39 25.123456" -> "-0 39 25.123456"
+        # Second row: "-0 39 25.123456" -> "-00 39 25.123456"
         self.assertEqual(rows[1]["time"], "2026-11-05 13:00:00")
-        self.assertEqual(rows[1]["de_pure"], "-0 39 25.123456")
+        self.assertEqual(rows[1]["de_pure"], "-00 39 25.123456")
 
     def test_parse_ephemeris_skips_invalid_coordinate(self):
         self.assertEqual(
@@ -187,7 +188,7 @@ class EphemerisTests(unittest.TestCase):
         """Verify altitude calculation relative to Yunnan Observatory Kunming 1m station."""
         from datetime import datetime
         stamp = datetime(2026, 11, 5, 12, 0, 0)
-        res = ephemeris.calculate_alt_az(stamp, "0 8 10.22", "-0 39 24.88", obs_code="286")
+        res = ephemeris.calculate_alt_az(stamp, "00 08 10.22", "-00 39 24.88", obs_code="286")
         self.assertIn("alt_deg", res)
         self.assertIn("alt_str", res)
         self.assertGreater(res["alt_deg"], 40.0)
@@ -195,9 +196,22 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(res["obs_status"], "observable")
         self.assertIn("云南天文台昆明", res["station_name"])
 
-        # Test geocentric code 500 defaults to Yunnan Observatory Kunming 1m for altitude
-        res_geo = ephemeris.calculate_alt_az(stamp, "0 8 10.22", "-0 39 24.88", obs_code="500")
-        self.assertEqual(res_geo["station_code"], "286")
+        # Test adaptability to other observatories (e.g. Xinglong 327)
+        res_xl = ephemeris.calculate_alt_az(stamp, "00 08 10.22", "-00 39 24.88", obs_code="327")
+        self.assertEqual(res_xl["station_code"], "327")
+        self.assertIn("兴隆", res_xl["station_name"])
+
+        # Test geocentric code 500
+        res_geo = ephemeris.calculate_alt_az(stamp, "00 08 10.22", "-00 39 24.88", obs_code="500")
+        self.assertEqual(res_geo["station_code"], "500")
+
+    def test_observatories_database_support(self):
+        """Verify 1400+ IAU / MPC observatory database is accessible."""
+        self.assertGreater(len(ephemeris.OBSERVATORIES), 1000)
+        for code in ["286", "327", "O07", "000"]:
+            st = ephemeris.get_observatory(code)
+            self.assertEqual(st["code"], code)
+            self.assertTrue(len(st["name"]) > 0)
 
     def test_target_metadata_and_diameter_in_ephemeris(self):
         """Verify satellite diameters and angular sizes are included in ephemeris output."""

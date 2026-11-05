@@ -114,12 +114,19 @@ def _parse_coordinates(ra: str, dec: str) -> tuple[str, str]:
         raise ValueError("赤纬超出有效范围")
 
     sign = "-" if is_negative else ("+" if raw_d.startswith("+") else "")
-    clean_des = raw_s.lstrip("+-")
-    # 格式化赤纬，确保度数为 0 且为负时，正确表示为 "-0 MM SS"
     if is_negative and not sign:
         sign = "-"
-    dec_normalized = f"{sign}{ded_val} {dem_val} {clean_des}"
-    ra_normalized = f"{int(rah)} {int(ram)} {ras_str}"
+
+    # 规范化：统一使用两位数补零，如 00 08 10.22 及 -00 39 24.88
+    clean_des = raw_s.lstrip("+-")
+    if des_val < 10 and not clean_des.startswith("0"):
+        clean_des = f"0{clean_des}"
+    clean_ras = ras_str
+    if ras_val < 10 and not clean_ras.startswith("0"):
+        clean_ras = f"0{clean_ras}"
+
+    ra_normalized = f"{rah_val:02d} {ram_val:02d} {clean_ras}"
+    dec_normalized = f"{sign}{ded_val:02d} {dem_val:02d} {clean_des}"
     return ra_normalized, dec_normalized
 
 
@@ -192,11 +199,44 @@ def download_dss_image(
 
 
 
-OBSERVATORIES = {
-    "286": {"name": "云南天文台昆明 1m望远镜", "lat": 25.0294, "lon": 102.7883, "alt": 2000.0},
-    "O07": {"name": "云南天文台丽江 2.4m望远镜", "lat": 26.6950, "lon": 100.0300, "alt": 3200.0},
-    "500": {"name": "地心坐标", "lat": 0.0, "lon": 0.0, "alt": 0.0},
-}
+import json
+
+def _load_observatories() -> dict[str, dict[str, Any]]:
+    json_path = Path(__file__).resolve().parent / "observatories.json"
+    if json_path.is_file():
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "286": {"name": "云南天文台昆明 1m望远镜", "lat": 25.0294, "lon": 102.7883, "alt": 2000.0},
+        "O07": {"name": "云南天文台丽江 2.4m望远镜", "lat": 26.6950, "lon": 100.0300, "alt": 3200.0},
+        "327": {"name": "国家天文台兴隆观测站 (2.16m/大视场)", "lat": 40.3964, "lon": 117.5750, "alt": 960.0},
+        "500": {"name": "地心坐标", "lat": 0.0, "lon": 0.0, "alt": 0.0},
+    }
+
+OBSERVATORIES = _load_observatories()
+
+def get_observatory(obs_code: str) -> dict[str, Any]:
+    code = str(obs_code).strip()
+    for k in [code, code.upper(), code.zfill(3)]:
+        if k in OBSERVATORIES:
+            data = OBSERVATORIES[k]
+            return {
+                "code": k,
+                "name": data.get("name", f"台站 {k}"),
+                "lat": float(data.get("lat", 0.0)),
+                "lon": float(data.get("lon", 0.0)),
+                "alt": float(data.get("alt", 0.0)),
+            }
+    return {
+        "code": code or "286",
+        "name": f"自定义台站 ({code})" if code else "云南天文台昆明 1m望远镜",
+        "lat": 25.0294,
+        "lon": 102.7883,
+        "alt": 2000.0,
+    }
 
 
 TARGET_METADATA = {
@@ -238,15 +278,25 @@ TARGET_METADATA = {
 }
 
 def calculate_alt_az(stamp_utc: datetime, ra_str: str, dec_str: str, obs_code: str = "286") -> dict:
-    station_code = str(obs_code).strip()
-    if station_code == "500" or station_code not in OBSERVATORIES:
-        calc_station = OBSERVATORIES["286"]
-    else:
-        calc_station = OBSERVATORIES[station_code]
+    station = get_observatory(obs_code)
+    station_code = station["code"]
 
-    lat = calc_station["lat"]
-    lon = calc_station["lon"]
-    alt_m = calc_station["alt"]
+    if station_code == "500":
+        return {
+            "alt_deg": 0.0,
+            "alt_str": "地心",
+            "alt_dms": "00°00'",
+            "az_deg": None,
+            "is_observable": False,
+            "obs_status": "geocentric",
+            "status_text": "地心 (无地平)",
+            "station_name": "地心坐标",
+            "station_code": "500",
+        }
+
+    lat = station["lat"]
+    lon = station["lon"]
+    alt_m = station["alt"]
 
     ra_parts = ra_str.split()
     ra_h = int(ra_parts[0]) + int(ra_parts[1]) / 60.0 + float(ra_parts[2]) / 3600.0
@@ -317,13 +367,13 @@ def calculate_alt_az(stamp_utc: datetime, ra_str: str, dec_str: str, obs_code: s
     return {
         "alt_deg": round(alt_deg, 2),
         "alt_str": f"{alt_deg:+.1f}°",
-        "alt_dms": f"{sign}{d}°{m:02d}'",
+        "alt_dms": f"{sign}{d:02d}°{m:02d}'",
         "az_deg": round(az_deg, 1) if az_deg is not None else None,
         "is_observable": alt_deg >= 30.0,
         "obs_status": obs_status,
         "status_text": status_text,
-        "station_name": calc_station.get("name", "云南天文台昆明 1m望远镜"),
-        "station_code": "286" if (station_code == "500" or station_code not in OBSERVATORIES) else station_code,
+        "station_name": station.get("name", f"台站 {station_code}"),
+        "station_code": station_code,
     }
 
 
@@ -416,7 +466,7 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
         "mag": "--",
         "parent": "--"
     })
-    station = OBSERVATORIES.get(str(observatory), OBSERVATORIES["286"])
+    station = get_observatory(observatory)
 
     return {
         "success": True,
@@ -533,7 +583,7 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
     else:
         night_date = bjt_dt.date()
 
-    station = OBSERVATORIES.get(str(obs_code), OBSERVATORIES["286"])
+    station = get_observatory(obs_code)
     cache_key = f"{night_date.isoformat()}_{obs_code}"
 
     if cache_key not in _SCHEDULE_CACHE and HAS_ASTROPY:
