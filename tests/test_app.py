@@ -1,13 +1,32 @@
+import sys
+from pathlib import Path
+
+# Ensure project root is in sys.path regardless of where tests are run from
+project_root = Path(__file__).resolve().parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 import unittest
 from unittest.mock import MagicMock, patch
 
 import app as ephemeris
 
-
 SAMPLE_PRE = """
  header
  2026 09 10 04 05 06.0 12 34 56.78 -23 45 01.2 extra
  footer
+"""
+
+SAMPLE_TRITON_PRE = """
+v5.21.05i     Planet: Neptune  (DE441)
+        Satellite: N1 Triton  (Emelyanov, Samorodov (2015) MNRAS, 454, 2205. )
+    Observatory N: 286 - Yunnan Observatory
+        Timescale: UTC
+Mean equator and equinox of J2000.  ICRF. 
+Coordinates astrometric 
+Year  M  D   H  M  S     alpha (h m s)      delta (° ' ")
+2026 11  5  12  0  0.00  0  8 10.224206    0 -39  24.875698
+2026 11  5  13  0  0.00  0  8 09.812345   -0  39  25.123456
 """
 
 
@@ -25,12 +44,42 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(favicon.mimetype, "image/jpeg")
         favicon.close()
 
+    def test_preset_satellites_cover_tonight_outline(self):
+        """Ensure all required satellites from observation outline are present."""
+        codes = {s["code"] for s in ephemeris.SATELLITES}
+        required_codes = [
+            "8001",  # N1 Triton
+            "8002",  # N2 Nereid
+            "6008",  # S8 Iapetus
+            "6009",  # S9 Phoebe
+            "6001",  # S1~S7 (Mimas to Hyperion in same 10' FOV)
+            "7001",  # U1~U5 (Miranda to Oberon in same FOV)
+            "10001", "10002", "10003", "10004",  # J6-J9
+        ]
+        self.assertEqual(len(ephemeris.SATELLITES), 10)
+        for c in required_codes:
+            self.assertIn(c, codes, f"Required satellite code {c} is missing from presets!")
+
     def test_parse_ephemeris(self):
         rows = ephemeris.parse_ephemeris(SAMPLE_PRE)
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["time"], "2026-09-10 04:05:06")
         self.assertEqual(rows[0]["ra_pure"], "12 34 56.78")
         self.assertEqual(rows[0]["de_pure"], "-23 45 01.2")
+
+    def test_parse_ephemeris_near_equator_negative_dec(self):
+        """Regression test for Triton N1 negative Dec where degree is 0 or -0 and minus is on minutes."""
+        rows = ephemeris.parse_ephemeris(SAMPLE_TRITON_PRE)
+        self.assertEqual(len(rows), 2)
+        # First row: "0 -39 24.875698" -> "-0 39 24.875698"
+        self.assertEqual(rows[0]["time"], "2026-11-05 12:00:00")
+        self.assertEqual(rows[0]["ra_pure"], "0 8 10.224206")
+        self.assertEqual(rows[0]["de_pure"], "-0 39 24.875698")
+        self.assertEqual(rows[0]["de"], "-0° 39' 24.875698\"")
+
+        # Second row: "-0 39 25.123456" -> "-0 39 25.123456"
+        self.assertEqual(rows[1]["time"], "2026-11-05 13:00:00")
+        self.assertEqual(rows[1]["de_pure"], "-0 39 25.123456")
 
     def test_parse_ephemeris_skips_invalid_coordinate(self):
         self.assertEqual(
@@ -117,6 +166,22 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.data, b"GIF89a")
         downloaded.close()
+
+
+
+    def test_observation_status_dynamic_endpoint(self):
+        """Verify dynamic astronomical calculation endpoint computes real dark sky & windows."""
+        res = self.client.get("/api/observation_status?obs=286&time=2026-11-05 21:00:00")
+        self.assertEqual(res.status_code, 200)
+        data = res.json
+        self.assertTrue(data["success"])
+        self.assertEqual(data["night_date"], "2026-11-05")
+        self.assertIn("twilight", data)
+        self.assertIn("planets", data)
+        # Neptune and Saturn should be active around 21:00 on Nov 5
+        self.assertTrue(data["planets"]["neptune"]["valid"])
+        self.assertEqual(data["planets"]["neptune"]["status"], "observing")
+        self.assertGreater(data["planets"]["neptune"]["pct"], 0)
 
 
 if __name__ == "__main__":

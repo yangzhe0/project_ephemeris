@@ -103,6 +103,54 @@
             height: 1px;
         }
 
+
+        /* 夜间天文暗色模式 */
+        body.dark-mode {
+            background-color: #0b0f19;
+            color: #e5e7eb;
+        }
+        body.dark-mode header {
+            background-color: #111827;
+            border-color: #1f2937;
+        }
+        body.dark-mode header h1 {
+            color: #f3f4f6;
+        }
+        body.dark-mode .bg-white {
+            background-color: #111827 !important;
+            border-color: #1f2937 !important;
+            color: #e5e7eb;
+        }
+        body.dark-mode .bg-gray-50 {
+            background-color: #1a2234 !important;
+            border-color: #1f2937 !important;
+            color: #9ca3af;
+        }
+        body.dark-mode .text-gray-800, body.dark-mode .text-gray-700 {
+            color: #f3f4f6 !important;
+        }
+        body.dark-mode .text-gray-600, body.dark-mode .text-gray-500 {
+            color: #9ca3af !important;
+        }
+        body.dark-mode input, body.dark-mode select {
+            background-color: #1f2937 !important;
+            border-color: #374151 !important;
+            color: #f9fafb !important;
+        }
+        body.dark-mode .border-gray-200, body.dark-mode .border-gray-300 {
+            border-color: #2e384d !important;
+        }
+        body.dark-mode .obs-progress-bar {
+            background-color: rgba(16, 185, 129, 0.25) !important;
+        }
+        body.dark-mode .sat-status-badge {
+            background-color: rgba(31, 41, 55, 0.9) !important;
+            color: #34d399 !important;
+        }
+        body.dark-mode tr:hover {
+            background-color: rgba(59, 130, 246, 0.15) !important;
+        }
+
     </style>
 </head>
 
@@ -124,11 +172,21 @@
                     <p class="text-xs text-gray-500">数据来源: SAI MSU</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2.5">
+                <div class="hidden md:flex text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1.5 rounded-lg font-medium items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    <span id="nightBadge">昆明站 2026-11-05 (第1夜)</span>
+                </div>
                 <div class="text-xs bg-gray-100 px-3 py-1.5 rounded-lg text-gray-600 font-mono flex items-center gap-2">
                     <span class="w-2 h-2 inline-block bg-green-500 rounded-full animate-pulse"></span>
                     UTC: <span id="utcClock">--:--:--</span>
                 </div>
+                <!-- 夜间暗色模式切换 -->
+                <button onclick="toggleDarkMode()" id="darkModeBtn"
+                    class="flex items-center gap-1 px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium rounded-lg transition"
+                    title="切换夜间暗色观测模式">
+                    <span id="darkModeIcon">🌙</span> <span class="hidden sm:inline" id="darkModeText">夜间模式</span>
+                </button>
                 <button onclick="toggleModal('guideModal')"
                     class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -147,8 +205,9 @@
         <!-- 左侧：参数设置面板 -->
         <div class="w-full lg:w-1/3 flex flex-col gap-4">
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
-                <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                    <h2 class="font-bold text-gray-800 flex items-center gap-2">
+                <!-- 头部：标题与自动状态 -->
+                <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <h2 class="font-bold text-gray-800 flex items-center gap-2 text-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -156,12 +215,79 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        参数设置
+                        目标与控制
                     </h2>
+                    <span class="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 点选即自动更新
+                    </span>
                 </div>
 
-                <div class="p-4 flex-1 overflow-y-auto">
-                    <form id="calcForm" class="space-y-3">
+                <!-- 浮动在最上方的“开始计算”按钮（调整视场、历表或输入自定义编号时使用） -->
+                <div class="p-3 bg-gray-50 border-b border-gray-100 flex-none">
+                    <button id="submitBtn" onclick="submitCalculation()"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition flex justify-center items-center gap-2 shadow-sm hover:shadow active:scale-98 duration-150">
+                        <div class="loader" id="btnLoader"></div>
+                        <span id="btnText">开始计算 (或微调后刷新)</span>
+                    </button>
+                </div>
+
+                <!-- 下方可整体滚动的表单区域（内部不出现局促的小滚动条） -->
+                <div class="p-4 flex-1 overflow-y-auto space-y-4">
+                    <form id="calcForm" class="space-y-4" onsubmit="event.preventDefault();submitCalculation();">
+                        
+                        <!-- 目标天体（完全铺平展开，底色动态进度条显示剩余可观测时间） -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-xs font-semibold text-gray-700">目标天体 (点击直接切换计算)</label>
+                                <span class="text-[10px] text-gray-400">底色显示剩余可观测时长</span>
+                            </div>
+                            
+                            <!-- 10个目标平铺，无内部滚动条 -->
+                            <div class="grid grid-cols-2 gap-1.5 mb-2" id="satelliteButtonsContainer">
+                                {% for sat in satellites %}
+                                <label class="relative flex items-center justify-between px-2.5 py-2.5 rounded-lg border border-gray-200 bg-white cursor-pointer overflow-hidden transition select-none hover:border-blue-400 group"
+                                       data-sat-code="{{ sat.code }}" data-planet="{{ sat.planet }}" id="sat-label-{{ sat.code }}"
+                                       title="点击直接选中并自动更新">
+                                    <input type="radio" name="satellite" value="{{ sat.code }}" data-name="{{ sat.name.split(' ')[0] }}" class="peer sr-only"
+                                        onchange="onSelectSatellite('{{ sat.code }}')" {% if sat.code==default_satellite %}checked{% endif %}>
+                                    
+                                    <!-- 底色进度条背景（由 JS 动态每分钟刷新宽度和颜色） -->
+                                    <span class="obs-progress-bar absolute inset-y-0 left-0 bg-blue-100 transition-all duration-700 ease-out pointer-events-none" style="width: 100%;"></span>
+                                    
+                                    <!-- 按钮前景文字 -->
+                                    <div class="relative z-10 flex items-center justify-between w-full">
+                                        <span class="font-bold text-xs text-gray-800 tracking-wide sat-name group-hover:text-blue-600 transition-colors">{{ sat.name.split(' ')[0] }}</span>
+                                        <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-600 bg-white/80 shadow-xs backdrop-blur-xs sat-status-badge">--%</span>
+                                    </div>
+                                    
+                                    <!-- 选中状态高亮外边框 -->
+                                    <span class="absolute inset-0 rounded-lg border-2 border-transparent peer-checked:border-blue-600 peer-checked:shadow-sm pointer-events-none transition-all"></span>
+                                </label>
+                                {% endfor %}
+                            </div>
+
+                            <!-- 自定义编号输入框 -->
+                            <div class="pt-1">
+                                <input type="text" id="customSatellite" placeholder="或输入 MSU 自然卫星代码 (回车直接计算)"
+                                    oninput="clearRadioSat()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();}"
+                                    class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition bg-white">
+                            </div>
+                        </div>
+
+                        <!-- 观测时间 (北京时间 +8) -->
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">观测时间 (北京时间 +8)</label>
+                            <input type="text" id="localTimeInput" placeholder="留空默认使用当前瞬时时刻，或输入 2026 11 05 21 30 00"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();}"
+                                class="w-full border border-gray-300 rounded-lg p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none">
+                            <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                                留空即直接按当前瞬时时间自动计算
+                            </p>
+                        </div>
+
                         <!-- 观测站 -->
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">观测站代码 (Observatory)</label>
@@ -170,51 +296,11 @@
                             <p class="text-[10px] text-gray-400 mt-1">默认: 286 (Yunnan Observatory 1m). 地心坐标: 500.</p>
                         </div>
 
-                        <!-- 目标天体 -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">目标天体 (Object)</label>
-                            <div class="border border-gray-100 rounded-lg p-2 bg-gray-50 max-h-48 overflow-y-auto">
-                                <div class="flex flex-wrap gap-1.5 mb-2">
-                                    {% for sat in satellites %}
-                                    <label class="inline-flex items-center cursor-pointer group">
-                                        <input type="radio" name="satellite" value="{{ sat.code }}" class="peer sr-only"
-                                            onchange="clearCustomSat()" {% if sat.code==default_satellite %}checked{%
-                                            endif %}>
-                                        <span
-                                            class="px-3 py-1.5 rounded-md text-xs font-medium bg-white text-gray-600 border border-gray-200 transition-all peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 peer-checked:shadow-md hover:bg-gray-100">{{
-                                            sat.name.split(' ')[0] }}</span>
-                                    </label>
-                                    {% endfor %}
-                                </div>
-                                <div class="pt-1.5 border-t border-gray-200">
-                                    <input type="text" id="customSatellite" placeholder="或输入 MSU 自然卫星代码 (如 5001 表示木卫一)"
-                                        oninput="clearRadioSat()"
-                                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition bg-white">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 时间选择 -->
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">观测时间 (北京时间 +8)</label>
-                            <input type="text" id="localTimeInput" placeholder="2025 02 12 12 00 00"
-                                class="w-full border border-gray-300 rounded-lg p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none">
-                            <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20"
-                                    fill="currentColor">
-                                    <path fill-rule="evenodd"
-                                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                                留空则默认使用当前 UTC 时间
-                            </p>
-                        </div>
-
-                        <!-- 高级参数 -->
-                        <details class="group border border-gray-200 rounded-lg overflow-hidden" open>
+                        <!-- 高级参数（平时不经常用到，默认折叠，可按需微调） -->
+                        <details class="group border border-gray-200 rounded-lg overflow-hidden">
                             <summary
                                 class="flex items-center justify-between cursor-pointer p-3 bg-gray-50 text-gray-600 text-sm hover:bg-gray-100 transition select-none">
-                                <span>高级参数</span>
+                                <span>高级参数设置 (视场 / 历表 / 步长)</span>
                                 <svg class="w-4 h-4 group-open:rotate-180 transition-transform" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -240,6 +326,11 @@
                                     </select>
                                 </div>
                                 <div>
+                                    <label class="text-xs text-purple-600 font-bold mb-1 block">视场 FOV (角分)</label>
+                                    <input type="number" id="fov" value="10" min="1" max="60"
+                                        class="w-full text-xs border border-purple-200 bg-purple-50 text-purple-700 font-bold rounded p-1.5 text-center focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                                </div>
+                                <div>
                                     <label class="text-xs text-gray-500 mb-1 block">步数</label>
                                     <input type="number" id="ntimes" value="1" min="1" max="100" step="1"
                                         class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
@@ -249,22 +340,9 @@
                                     <input type="number" id="timestep" value="1" min="0.001" max="8760" step="any"
                                         class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
                                 </div>
-                                <div>
-                                    <label class="text-xs text-purple-600 font-bold mb-1 block">视场 (角分)</label>
-                                    <input type="number" id="fov" value="10" min="1" max="60"
-                                        class="w-full text-xs border border-purple-200 bg-purple-50 text-purple-700 font-bold rounded p-1.5 text-center focus:ring-2 focus:ring-purple-500 focus:outline-none">
-                                </div>
                             </div>
                         </details>
                     </form>
-                </div>
-
-                <div class="p-4 border-t border-gray-100 bg-gray-50">
-                    <button id="submitBtn" onclick="submitCalculation()"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition flex justify-center items-center gap-2 shadow-lg hover:shadow-xl transform active:scale-95 duration-200">
-                        <div class="loader" id="btnLoader"></div>
-                        <span id="btnText">开始计算</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -336,9 +414,16 @@
                             <!-- 动态插入下载按钮 -->
                         </div>
                     </div>
-                    <div class="p-4 flex items-center justify-center bg-gray-900 h-[480px] overflow-hidden"
+                    <div class="relative p-4 flex items-center justify-center bg-gray-900 h-[480px] overflow-hidden group/canvas"
                         id="previewContent">
-                        <p class="text-gray-500 text-sm">点击上方“预览DSS”按钮加载图像</p>
+                        <!-- 天文方位指引 (J2000 ICRF: 北在上，东在左) -->
+                        <div class="absolute top-3 left-3 z-30 pointer-events-none bg-black/60 backdrop-blur-xs text-white/90 text-[11px] font-mono px-2 py-1 rounded border border-white/20 flex items-center gap-2">
+                            <span>↑ N (北)</span>
+                            <span>← E (东)</span>
+                            <span class="text-white/40">|</span>
+                            <span id="chartFovIndicator">FOV: 10' × 10'</span>
+                        </div>
+                        <p class="text-gray-500 text-sm">点击目标自动生成寻星图</p>
                     </div>
                 </div>
 
@@ -347,6 +432,102 @@
     </main>
 
     <script>
+
+        // --- 观测时间窗口与每分钟底色进度条刷新逻辑 (完全由后端天体力学动态计算驱动) ---
+        async function updateObservationProgress(isInitial = false) {
+            const obs = document.getElementById('observatory').value || '286';
+            const localInput = document.getElementById('localTimeInput').value.trim();
+
+            let url = `/api/observation_status?obs=${encodeURIComponent(obs)}`;
+            if (localInput) {
+                url += `&time=${encodeURIComponent(localInput)}`;
+            }
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data || !data.success) return;
+
+                // 1. 更新顶部当夜状态指示徽标
+                const nightBadge = document.getElementById('nightBadge');
+                if (nightBadge && data.station && data.twilight) {
+                    const stName = (data.station.name || '昆明站').split(' ')[0];
+                    nightBadge.innerText = `${stName} ${data.night_date} (暗夜 ${data.twilight.dusk} ~ ${data.twilight.dawn})`;
+                }
+
+                // 2. 动态更新每个天体按钮的底色进度条和徽标
+                const labels = document.querySelectorAll('#satelliteButtonsContainer label[data-planet]');
+                labels.forEach(label => {
+                    const planet = label.getAttribute('data-planet');
+                    const pInfo = data.planets ? data.planets[planet] : null;
+                    const pBar = label.querySelector('.obs-progress-bar');
+                    const badge = label.querySelector('.sat-status-badge');
+                    if (!pInfo || !pBar || !badge) return;
+
+                    badge.innerText = pInfo.badge || '--%';
+                    label.title = pInfo.tooltip || '';
+
+                    if (pInfo.status === 'observing') {
+                        pBar.style.width = `${pInfo.pct}%`;
+                        if (pInfo.pct > 30) {
+                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-emerald-100/80 transition-all duration-700 ease-out pointer-events-none';
+                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-emerald-700 bg-white/90 shadow-xs sat-status-badge';
+                        } else {
+                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-amber-100/90 transition-all duration-700 ease-out pointer-events-none';
+                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-amber-700 bg-white/90 shadow-xs sat-status-badge';
+                        }
+                    } else if (pInfo.status === 'waiting') {
+                        pBar.style.width = '100%';
+                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-blue-50/70 border-r border-blue-200 transition-all duration-700 ease-out pointer-events-none';
+                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-blue-600 bg-blue-50/90 shadow-xs sat-status-badge';
+                    } else {
+                        pBar.style.width = '0%';
+                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-gray-100 transition-all duration-700 ease-out pointer-events-none';
+                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-400 bg-gray-100 shadow-xs sat-status-badge';
+                    }
+                });
+
+                // 3. 初始载入时，根据天体力学实时结果自动勾选当前最适目标，并自动发起计算
+                if (isInitial && data.best_target) {
+                    const radio = document.querySelector(`input[name="satellite"][value="${data.best_target}"]`);
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                    setTimeout(() => {
+                        submitCalculation();
+                    }, 300);
+                }
+            } catch (e) {
+                console.error("Failed to fetch dynamic observation status:", e);
+            }
+        }
+
+        // --- 目标点选即自动切换计算 ---
+        function onSelectSatellite(code) {
+            clearCustomSat();
+            submitCalculation();
+        }
+
+        // --- 暗色观测模式切换 ---
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('project_ephemeris_dark', isDark ? '1' : '0');
+            const icon = document.getElementById('darkModeIcon');
+            const txt = document.getElementById('darkModeText');
+            if (icon) icon.innerText = isDark ? '☀️' : '🌙';
+            if (txt) txt.innerText = isDark ? '明亮模式' : '夜间模式';
+        }
+        if (localStorage.getItem('project_ephemeris_dark') === '1') {
+            document.body.classList.add('dark-mode');
+        }
+
+        // 页面初始化：调用后端天体力学动态计算，并启动每分钟(60秒)自动刷新
+        document.addEventListener('DOMContentLoaded', () => {
+            updateObservationProgress(true);
+            setInterval(() => updateObservationProgress(false), 60000);
+        });
+
         // 全局数据存储
         let currentResults = [];
         let currentPreviewUrl = null;

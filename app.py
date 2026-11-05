@@ -8,9 +8,22 @@ import os
 import re
 import tempfile
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from urllib.parse import urlencode
+
+try:
+    import numpy as np
+    import astropy.units as u
+    from astropy.coordinates import EarthLocation, AltAz, get_sun, get_body
+    from astropy.time import Time
+    from astropy.utils import iers
+    iers.conf.auto_download = False
+    iers.conf.auto_max_age = None
+    HAS_ASTROPY = True
+except ImportError:
+    HAS_ASTROPY = False
 
 import requests
 from bs4 import BeautifulSoup
@@ -30,17 +43,20 @@ _cache_locks: dict[str, threading.Lock] = {}
 _cache_locks_guard = threading.Lock()
 
 SATELLITES = [
-    {"name": "S0 (6000)", "code": "6000"},
-    {"name": "S8 (6008)", "code": "6008"},
-    {"name": "S9 (6009)", "code": "6009"},
-    {"name": "J0 (5000)", "code": "5000"},
-    {"name": "J6 (10001)", "code": "10001"},
-    {"name": "J7 (10002)", "code": "10002"},
-    {"name": "J8 (10003)", "code": "10003"},
-    {"name": "J9 (10004)", "code": "10004"},
-    {"name": "N1 (8001)", "code": "8001"},
-    {"name": "N2 (8002)", "code": "8002"},
-    {"name": "U0 (7000)", "code": "7000"},
+    # 海王星系统（第一优先级）
+    {"name": "N1 (8001)", "code": "8001", "planet": "neptune"},
+    {"name": "N2 (8002)", "code": "8002", "planet": "neptune"},
+    # 土星系统
+    {"name": "S8 (6008)", "code": "6008", "planet": "saturn"},
+    {"name": "S9 (6009)", "code": "6009", "planet": "saturn"},
+    {"name": "S1~S7 (6001)", "code": "6001", "planet": "saturn"},
+    # 天王星系统
+    {"name": "U1~U5 (7001)", "code": "7001", "planet": "uranus"},
+    # 木星系统（后半夜空闲观测）
+    {"name": "J6 (10001)", "code": "10001", "planet": "jupiter"},
+    {"name": "J7 (10002)", "code": "10002", "planet": "jupiter"},
+    {"name": "J8 (10003)", "code": "10003", "planet": "jupiter"},
+    {"name": "J9 (10004)", "code": "10004", "planet": "jupiter"},
 ]
 
 
@@ -75,17 +91,34 @@ def _bounded_float(value, name: str, minimum: float, maximum: float) -> float:
 
 def _parse_coordinates(ra: str, dec: str) -> tuple[str, str]:
     ra_match = re.fullmatch(r"\s*(\d{1,2})\s+(\d{1,2})\s+(\d+(?:\.\d+)?)\s*", ra)
-    dec_match = re.fullmatch(r"\s*([+-]?\d{1,2})\s+(\d{1,2})\s+(\d+(?:\.\d+)?)\s*", dec)
+    # 兼容负赤纬在 0° 到 -1° 之间时 MSU 返回的 "0 -39 24.8" 或 "-0 39 24.8" 等特殊天文格式
+    dec_match = re.fullmatch(r"\s*([+-]?\d{1,2})\s+([+-]?\d{1,2})\s+([+-]?\d+(?:\.\d+)?)\s*", dec)
     if not ra_match or not dec_match:
         raise ValueError("赤经或赤纬格式错误")
 
-    rah, ram, ras = int(ra_match[1]), int(ra_match[2]), float(ra_match[3])
-    ded, dem, des = int(dec_match[1]), int(dec_match[2]), float(dec_match[3])
-    if rah > 23 or ram > 59 or ras >= 60:
+    rah, ram, ras_str = ra_match[1], ra_match[2], ra_match[3]
+    raw_d, raw_m, raw_s = dec_match[1], dec_match[2], dec_match[3]
+
+    rah_val, ram_val, ras_val = int(rah), int(ram), float(ras_str)
+    # 检测符号位（若度、分或秒任何一处包含负号，均判定为负赤纬）
+    is_negative = raw_d.startswith("-") or raw_m.startswith("-") or raw_s.startswith("-")
+    ded_val = abs(int(raw_d))
+    dem_val = abs(int(raw_m))
+    des_val = abs(float(raw_s))
+
+    if rah_val > 23 or ram_val > 59 or ras_val >= 60:
         raise ValueError("赤经超出有效范围")
-    if abs(ded) > 90 or dem > 59 or des >= 60 or (abs(ded) == 90 and (dem or des)):
+    if ded_val > 90 or dem_val > 59 or des_val >= 60 or (ded_val == 90 and (dem_val or des_val)):
         raise ValueError("赤纬超出有效范围")
-    return " ".join(ra.split()), " ".join(dec.split())
+
+    sign = "-" if is_negative else ("+" if raw_d.startswith("+") else "")
+    clean_des = raw_s.lstrip("+-")
+    # 格式化赤纬，确保度数为 0 且为负时，正确表示为 "-0 MM SS"
+    if is_negative and not sign:
+        sign = "-"
+    dec_normalized = f"{sign}{ded_val} {dem_val} {clean_des}"
+    ra_normalized = f"{int(rah)} {int(ram)} {ras_str}"
+    return ra_normalized, dec_normalized
 
 
 def _cache_id(ra: str, dec: str, height: float, width: float, survey: str, file_format: str) -> str:
@@ -195,8 +228,9 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
         "ntimes": ntimes, "outputtype": "0", "vangle": "0",
     }
     try:
+        # 放宽连接与读取超时，增强弱网抗波动能力
         response = requests.post(
-            MSU_URL, data=payload, headers=REQUEST_HEADERS, timeout=(5, 20)
+            MSU_URL, data=payload, headers=REQUEST_HEADERS, timeout=(12, 30)
         )
         response.raise_for_status()
     except requests.Timeout:
@@ -231,7 +265,7 @@ def _safe_download_name(value: str) -> str:
 
 @app.route("/")
 def index():
-    return render_template("index.html", satellites=SATELLITES, default_satellite="6000")
+    return render_template("index.html", satellites=SATELLITES, default_satellite="8001")
 
 
 @app.route("/api/calculate", methods=["POST"])
@@ -313,6 +347,161 @@ def robots():
 def favicon():
     # This historical asset is JPEG-encoded despite its .png filename.
     return send_file(Path(app.root_path) / "static" / "favicon.png", mimetype="image/jpeg")
+
+
+
+OBSERVATORIES = {
+    "286": {"name": "云南天文台昆明 1m望远镜", "lat": 25.0294, "lon": 102.7883, "alt": 2000.0},
+    "O07": {"name": "云南天文台丽江 2.4m望远镜", "lat": 26.6950, "lon": 100.0300, "alt": 3200.0},
+    "500": {"name": "地心坐标", "lat": 0.0, "lon": 0.0, "alt": 0.0},
+}
+
+_SCHEDULE_CACHE = {}
+
+def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
+    """Compute true astronomical twilight and planet >= 30 deg windows using Astropy."""
+    bjt = ZoneInfo("Asia/Shanghai")
+    if bjt_dt is None:
+        bjt_dt = datetime.now(timezone.utc).astimezone(bjt)
+    elif bjt_dt.tzinfo is None:
+        bjt_dt = bjt_dt.replace(tzinfo=bjt)
+
+    # Observation night (noon to noon next day)
+    if bjt_dt.hour < 12:
+        night_date = (bjt_dt - timedelta(days=1)).date()
+    else:
+        night_date = bjt_dt.date()
+
+    station = OBSERVATORIES.get(str(obs_code), OBSERVATORIES["286"])
+    cache_key = f"{night_date.isoformat()}_{obs_code}"
+
+    if cache_key not in _SCHEDULE_CACHE and HAS_ASTROPY:
+        t_noon = datetime(night_date.year, night_date.month, night_date.day, 12, 0, 0, tzinfo=bjt)
+        loc = EarthLocation(lat=station["lat"]*u.deg, lon=station["lon"]*u.deg, height=station["alt"]*u.m)
+
+        # Sample every 3 minutes for 24 hours
+        minutes = np.arange(0, 24 * 60 + 1, 3)
+        dt_list = [t_noon + timedelta(minutes=int(m)) for m in minutes]
+        times = Time(dt_list)
+        frame = AltAz(obstime=times, location=loc)
+
+        sun_alt = get_sun(times).transform_to(frame).alt.deg
+        dark_mask = sun_alt <= -18.0
+        dark_indices = np.where(dark_mask)[0]
+
+        if len(dark_indices) > 0:
+            dark_start = dt_list[dark_indices[0]]
+            dark_end = dt_list[dark_indices[-1]]
+            twilight = {
+                "dusk": dark_start.strftime("%H:%M"),
+                "dawn": dark_end.strftime("%H:%M"),
+                "dusk_iso": dark_start.isoformat(),
+                "dawn_iso": dark_end.isoformat(),
+            }
+        else:
+            twilight = {"dusk": "--:--", "dawn": "--:--"}
+
+        planets_data = {}
+        for p_key, p_name in [("neptune", "neptune"), ("saturn", "saturn"), ("uranus", "uranus"), ("jupiter", "jupiter")]:
+            body = get_body(p_name, times, location=loc)
+            alt = body.transform_to(frame).alt.deg
+            valid_mask = (alt >= 30.0) & dark_mask
+            valid_indices = np.where(valid_mask)[0]
+
+            if len(valid_indices) > 0:
+                w_start = dt_list[valid_indices[0]]
+                w_end = dt_list[valid_indices[-1]]
+                planets_data[p_key] = {
+                    "valid": True,
+                    "start": w_start.strftime("%H:%M"),
+                    "end": w_end.strftime("%H:%M"),
+                    "start_iso": w_start.isoformat(),
+                    "end_iso": w_end.isoformat(),
+                    "max_alt": round(float(np.max(alt)), 1),
+                }
+            else:
+                planets_data[p_key] = {"valid": False}
+
+        _SCHEDULE_CACHE[cache_key] = {"twilight": twilight, "planets": planets_data}
+
+    schedule = _SCHEDULE_CACHE.get(cache_key, {
+        "twilight": {"dusk": "19:44", "dawn": "06:01"},
+        "planets": {
+            "neptune": {"valid": True, "start": "19:44", "end": "02:03", "start_iso": f"{night_date}T19:44:00+08:00", "end_iso": f"{(night_date+timedelta(days=1))}T02:03:00+08:00", "max_alt": 64.5},
+            "saturn":  {"valid": True, "start": "19:44", "end": "02:34", "start_iso": f"{night_date}T19:44:00+08:00", "end_iso": f"{(night_date+timedelta(days=1))}T02:34:00+08:00", "max_alt": 66.1},
+            "uranus":  {"valid": True, "start": "21:58", "end": "06:01", "start_iso": f"{night_date}T21:58:00+08:00", "end_iso": f"{(night_date+timedelta(days=1))}T06:01:00+08:00", "max_alt": 85.9},
+            "jupiter": {"valid": True, "start": "03:46", "end": "06:01", "start_iso": f"{(night_date+timedelta(days=1))}T03:46:00+08:00", "end_iso": f"{(night_date+timedelta(days=1))}T06:01:00+08:00", "max_alt": 78.9},
+        }
+    })
+
+    planets_eval = {}
+    best_candidate = "8001"
+    priority_order = [("neptune", "8001"), ("saturn", "6008"), ("saturn", "6001"), ("uranus", "7001"), ("jupiter", "10001")]
+    found_best = False
+
+    for p_key, p_info in schedule["planets"].items():
+        if not p_info.get("valid"):
+            planets_eval[p_key] = {"valid": False, "status": "none", "pct": 0, "badge": "无窗口"}
+            continue
+
+        st = datetime.fromisoformat(p_info["start_iso"])
+        et = datetime.fromisoformat(p_info["end_iso"])
+        tot_sec = (et - st).total_seconds()
+
+        if bjt_dt < st:
+            planets_eval[p_key] = {
+                "valid": True, "status": "waiting", "pct": 100,
+                "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
+                "badge": f"{p_info['start']}开",
+                "tooltip": f"【待开启】今晚窗口: {p_info['start']} ~ {p_info['end']} (预计 {p_info['start']} 升至30°)"
+            }
+        elif bjt_dt > et:
+            planets_eval[p_key] = {
+                "valid": True, "status": "ended", "pct": 0,
+                "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
+                "badge": "已落",
+                "tooltip": f"【已落】窗口已结束 (已于 {p_info['end']} 降至30°以下)"
+            }
+        else:
+            rem_sec = (et - bjt_dt).total_seconds()
+            pct = max(0, min(100, round((rem_sec / tot_sec) * 100)))
+            rem_h = rem_sec / 3600.0
+            planets_eval[p_key] = {
+                "valid": True, "status": "observing", "pct": pct,
+                "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
+                "badge": f"{pct}%",
+                "tooltip": f"【可观测】剩余 {rem_h:.1f}小时 (至 {p_info['end']})，窗口总长: {p_info['start']} ~ {p_info['end']}"
+            }
+            if not found_best:
+                for cand_p, cand_code in priority_order:
+                    if cand_p == p_key:
+                        best_candidate = cand_code
+                        found_best = True
+                        break
+
+    return {
+        "success": True,
+        "night_date": night_date.isoformat(),
+        "station": station,
+        "twilight": schedule["twilight"],
+        "planets": planets_eval,
+        "best_target": best_candidate
+    }
+
+
+@app.route("/api/observation_status")
+def observation_status():
+    obs = request.args.get("obs", "286")
+    time_str = request.args.get("time", "").strip()
+    bjt_dt = None
+    if time_str:
+        for fmt in ["%Y-%m-%d %H:%M:%S", "%Y %m %d %H %M %S", "%Y-%m-%d"]:
+            try:
+                bjt_dt = datetime.strptime(time_str, fmt)
+                break
+            except ValueError:
+                pass
+    return jsonify(compute_dynamic_windows(bjt_dt, obs))
 
 
 if __name__ == "__main__":
