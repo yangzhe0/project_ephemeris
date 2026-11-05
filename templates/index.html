@@ -390,8 +390,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            计算结果
+                            计算结果与高度角
                         </h2>
+                        <div id="targetSummaryHeader" class="text-xs text-gray-500 font-mono"></div>
                     </div>
                     <div id="resultCards" class="flex-1 overflow-auto">
                         <!-- 动态插入结果 -->
@@ -659,9 +660,11 @@
 
                 if (result.success) {
                     currentResults = result.data;
+                    currentTargetInfo = result.target_info || null;
+                    currentStation = result.station || null;
                     emptyState.classList.add('hidden');
                     resultArea.classList.remove('hidden');
-                    renderResults(result.data);
+                    renderResults(result.data, result.target_info, result.station);
 
                     // 自动预览第一条结果
                     if (result.data.length > 0) {
@@ -688,41 +691,111 @@
             errorMsg.classList.remove('hidden');
         }
 
-        // 渲染结果列表
-        function renderResults(data) {
+        // 渲染结果列表（含云南台高度角与直径）
+        let currentTargetInfo = null;
+        let currentStation = null;
+
+        function renderResults(data, targetInfo = currentTargetInfo, station = currentStation) {
             const container = document.getElementById('resultCards');
-            container.innerHTML = `
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm p-4">暂无数据</p>';
+                return;
+            }
+
+            const first = data[0];
+            const tName = targetInfo?.name || `天体 ${document.querySelector('input[name="satellite"]:checked')?.value || ''}`;
+            const diameter = first.diameter || targetInfo?.diameter || '--';
+            const angularSize = first.angular_size || targetInfo?.angular_size || '--';
+            const mag = first.mag || targetInfo?.mag || '--';
+            const stName = first.station_name || station?.name || '云南天文台昆明 1m望远镜';
+
+            // 顶部精简摘要
+            const summaryHeader = document.getElementById('targetSummaryHeader');
+            if (summaryHeader) {
+                summaryHeader.innerHTML = `<span>高度角: <strong class="${first.is_observable ? 'text-emerald-600' : 'text-amber-600'}">${first.alt_str}</strong></span> | <span>直径: <strong>${diameter}</strong></span>`;
+            }
+
+            // 目标详细状态横幅
+            let bannerHtml = `
+                <div class="p-3 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border-b border-blue-100 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-gray-900 text-sm">${tName}</span>
+                        ${mag !== '--' ? `<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold text-[11px]">星等 ${mag}</span>` : ''}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-600">
+                        <div><span class="text-gray-400">测站:</span> <span class="font-medium text-gray-800">${stName}</span></div>
+                        <div>
+                            <span class="text-gray-400">云南台高度角:</span>
+                            <span class="font-bold font-mono text-sm ${first.is_observable ? 'text-emerald-700' : (first.alt_deg >= 0 ? 'text-amber-700' : 'text-gray-500')}">${first.alt_str}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${first.is_observable ? 'bg-emerald-100 text-emerald-800' : (first.alt_deg >= 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600')}">${first.status_text || (first.is_observable ? '适测 ≥30°' : '低空')}</span>
+                        </div>
+                        <div><span class="text-gray-400">天体直径:</span> <span class="font-bold font-mono text-gray-800">${diameter}</span></div>
+                        <div><span class="text-gray-400">视角直径:</span> <span class="font-bold font-mono text-purple-700">${angularSize}</span></div>
+                    </div>
+                </div>
+            `;
+
+            // 数据表格
+            let tableHtml = `
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 text-gray-600 text-sm sticky top-0">
+                        <thead class="bg-gray-50 text-gray-600 text-xs uppercase sticky top-0">
                             <tr>
-                                <th class="px-3 py-2 font-medium border-b">时间 (UTC)</th>
-                                <th class="px-3 py-2 font-medium border-b">赤经 (R.A.)</th>
-                                <th class="px-3 py-2 font-medium border-b">赤纬 (Dec.)</th>
-                                <th class="px-3 py-2 font-medium border-b text-right">操作</th>
+                                <th class="px-3 py-2 font-semibold border-b">时间 (UTC)</th>
+                                <th class="px-3 py-2 font-semibold border-b text-center">高度角 (云南台)</th>
+                                <th class="px-3 py-2 font-semibold border-b">赤经 (R.A.)</th>
+                                <th class="px-3 py-2 font-semibold border-b">赤纬 (Dec.)</th>
+                                <th class="px-3 py-2 font-semibold border-b text-center">天体直径 (视直径)</th>
+                                <th class="px-3 py-2 font-semibold border-b text-right">操作</th>
                             </tr>
                         </thead>
-                        <tbody class="text-base font-mono text-gray-700 divide-y divide-gray-100">
-                            ${data.map((item, index) => `
-                                <tr class="hover:bg-blue-50 transition">
-                                    <td class="px-3 py-2 whitespace-nowrap">${item.time}</td>
-                                    <td class="px-3 py-2 text-blue-700 font-bold">${item.ra}</td>
-                                    <td class="px-3 py-2 text-blue-700 font-bold">${item.de}</td>
-                                    <td class="px-3 py-2 text-right">
-                                        <button onclick="copyToClipboard('${item.ra_pure}\\n${item.de_pure}', this)" 
-                                            class="px-3 py-1.5 text-sm font-medium border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <tbody class="text-sm font-mono text-gray-700 divide-y divide-gray-100">
+                            ${data.map((item, index) => {
+                                const isObs = item.is_observable;
+                                const altColor = isObs 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                    : (item.alt_deg >= 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-500 border-gray-200');
+                                const statusPill = isObs 
+                                    ? '<span class="text-[10px] text-emerald-600 font-sans ml-1">适测</span>' 
+                                    : (item.alt_deg >= 0 ? '<span class="text-[10px] text-amber-600 font-sans ml-1">低空</span>' : '<span class="text-[10px] text-gray-400 font-sans ml-1">落</span>');
+                                
+                                const diamText = item.diameter && item.diameter !== '--' ? item.diameter : diameter;
+                                const angText = item.angular_size && item.angular_size !== '--' ? item.angular_size : angularSize;
+
+                                return `
+                                <tr class="hover:bg-blue-50/60 transition ${index === 0 ? 'bg-blue-50/20' : ''}">
+                                    <td class="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">${item.time}</td>
+                                    <td class="px-3 py-2.5 whitespace-nowrap text-center">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${altColor}">
+                                            ${item.alt_str || '--'}
+                                            ${statusPill}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-blue-700 font-bold whitespace-nowrap">${item.ra}</td>
+                                    <td class="px-3 py-2.5 text-blue-700 font-bold whitespace-nowrap">${item.de}</td>
+                                    <td class="px-3 py-2.5 text-center text-xs text-gray-600 whitespace-nowrap">
+                                        <span class="font-medium text-gray-800">${diamText}</span>
+                                        <span class="text-purple-600 text-[11px] block">(${angText})</span>
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                                        <button onclick="copyToClipboard('${item.ra_pure}\n${item.de_pure}', this)" 
+                                            class="px-2.5 py-1 text-xs font-medium border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1 shadow-2xs"
+                                            title="复制赤经赤纬 (可直接粘贴至望远镜控制台)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                             </svg>
-                                            复制
+                                            复制坐标
                                         </button>
                                     </td>
                                 </tr>
-                            `).join('')}
+                                `;
+                            }).join('')}
                         </tbody>
                     </table>
                 </div>
             `;
+
+            container.innerHTML = bannerHtml + tableHtml;
         }
 
         // 复制功能
@@ -807,8 +880,9 @@
                             <img src="${currentPreviewUrl}" alt="DSS Chart" class="max-h-full max-w-full object-contain rounded shadow-lg border border-gray-700 cursor-zoom-in" onclick="openFullscreen()" title="点击全屏查看">
                             <div class="target-marker" aria-hidden="true">
                             </div>
-                            <div class="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded pointer-events-none">
-                                FOV: ${fov}'
+                            <div class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2.5 py-1 rounded pointer-events-none flex items-center gap-2 font-mono">
+                                <span>FOV: ${fov}'</span>
+                                ${item.alt_str ? `<span class="text-emerald-400">| 云南台: ${item.alt_str}</span>` : ''}
                             </div>
                         </div>
                     `;

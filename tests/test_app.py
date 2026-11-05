@@ -183,6 +183,36 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(data["planets"]["neptune"]["status"], "observing")
         self.assertGreater(data["planets"]["neptune"]["pct"], 0)
 
+    def test_calculate_alt_az_for_kunming(self):
+        """Verify altitude calculation relative to Yunnan Observatory Kunming 1m station."""
+        from datetime import datetime
+        stamp = datetime(2026, 11, 5, 12, 0, 0)
+        res = ephemeris.calculate_alt_az(stamp, "0 8 10.22", "-0 39 24.88", obs_code="286")
+        self.assertIn("alt_deg", res)
+        self.assertIn("alt_str", res)
+        self.assertGreater(res["alt_deg"], 40.0)
+        self.assertTrue(res["is_observable"])
+        self.assertEqual(res["obs_status"], "observable")
+        self.assertIn("云南天文台昆明", res["station_name"])
+
+        # Test geocentric code 500 defaults to Yunnan Observatory Kunming 1m for altitude
+        res_geo = ephemeris.calculate_alt_az(stamp, "0 8 10.22", "-0 39 24.88", obs_code="500")
+        self.assertEqual(res_geo["station_code"], "286")
+
+    def test_target_metadata_and_diameter_in_ephemeris(self):
+        """Verify satellite diameters and angular sizes are included in ephemeris output."""
+        self.assertIn("8001", ephemeris.TARGET_METADATA)
+        self.assertIn("2,707 km", ephemeris.TARGET_METADATA["8001"]["diameter"])
+        self.assertIn("0.13″", ephemeris.TARGET_METADATA["8001"]["angular_size"])
+
+        rows = ephemeris.parse_ephemeris(SAMPLE_TRITON_PRE, observatory="286", satellite="8001")
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["diameter"], "2,707 km")
+        self.assertIn("0.13″", rows[0]["angular_size"])
+        self.assertIn("alt_deg", rows[0])
+        self.assertIn("alt_str", rows[0])
+        self.assertIn("云南天文台昆明", rows[0]["station_name"])
+
 
 if __name__ == "__main__":
     unittest.main()

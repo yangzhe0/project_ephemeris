@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import hashlib
 import math
 import os
@@ -189,9 +191,146 @@ def download_dss_image(
             partial_path.unlink(missing_ok=True)
 
 
-def parse_ephemeris(pre_content: str) -> list[dict[str, str]]:
-    """Parse the data rows returned inside MSU's ``pre`` block."""
+
+OBSERVATORIES = {
+    "286": {"name": "云南天文台昆明 1m望远镜", "lat": 25.0294, "lon": 102.7883, "alt": 2000.0},
+    "O07": {"name": "云南天文台丽江 2.4m望远镜", "lat": 26.6950, "lon": 100.0300, "alt": 3200.0},
+    "500": {"name": "地心坐标", "lat": 0.0, "lon": 0.0, "alt": 0.0},
+}
+
+
+TARGET_METADATA = {
+    # 海王星系统 (Neptune)
+    "8001": {"name": "海卫一 Triton (N1)", "diameter": "2,707 km", "angular_size": "约 0.13″", "mag": "13.5", "parent": "海王星 (Neptune)"},
+    "8002": {"name": "海卫二 Nereid (N2)", "diameter": "350 km", "angular_size": "约 0.02″", "mag": "18.8~19.2", "parent": "海王星 (Neptune)"},
+    "8000": {"name": "海王星 Neptune (中心)", "diameter": "49,244 km", "angular_size": "约 2.35″", "mag": "7.8", "parent": "海王星"},
+
+    # 土星系统 (Saturn)
+    "6008": {"name": "土卫八 Iapetus (S8)", "diameter": "1,469 km", "angular_size": "约 0.17″", "mag": "11.2", "parent": "土星 (Saturn)"},
+    "6009": {"name": "土卫九 Phoebe (S9)", "diameter": "213 km", "angular_size": "约 0.02″", "mag": "16.5", "parent": "土星 (Saturn)"},
+    "6001": {"name": "土卫一 Mimas (S1~S7)", "diameter": "396 km (系内396~5150km)", "angular_size": "0.05″~0.75″", "mag": "8.5~14.5", "parent": "土星 (Saturn)"},
+    "6002": {"name": "土卫二 Enceladus (S2)", "diameter": "504 km", "angular_size": "约 0.07″", "mag": "11.7", "parent": "土星 (Saturn)"},
+    "6003": {"name": "土卫三 Tethys (S3)", "diameter": "1,062 km", "angular_size": "约 0.15″", "mag": "10.2", "parent": "土星 (Saturn)"},
+    "6004": {"name": "土卫四 Dione (S4)", "diameter": "1,123 km", "angular_size": "约 0.16″", "mag": "10.4", "parent": "土星 (Saturn)"},
+    "6005": {"name": "土卫五 Rhea (S5)", "diameter": "1,527 km", "angular_size": "约 0.22″", "mag": "9.7", "parent": "土星 (Saturn)"},
+    "6006": {"name": "土卫六 Titan (S6)", "diameter": "5,150 km", "angular_size": "约 0.75″", "mag": "8.5", "parent": "土星 (Saturn)"},
+    "6007": {"name": "土卫七 Hyperion (S7)", "diameter": "270 km", "angular_size": "约 0.04″", "mag": "14.2", "parent": "土星 (Saturn)"},
+    "6000": {"name": "土星 Saturn (中心)", "diameter": "120,536 km", "angular_size": "约 18.5″", "mag": "0.6", "parent": "土星"},
+
+    # 天王星系统 (Uranus)
+    "7001": {"name": "天卫一 Ariel (U1~U5)", "diameter": "1,158 km (系内472~1578km)", "angular_size": "0.03″~0.11″", "mag": "14.0~16.5", "parent": "天王星 (Uranus)"},
+    "7002": {"name": "天卫二 Umbriel (U2)", "diameter": "1,169 km", "angular_size": "约 0.08″", "mag": "15.0", "parent": "天王星 (Uranus)"},
+    "7003": {"name": "天卫三 Titania (U3)", "diameter": "1,578 km", "angular_size": "约 0.11″", "mag": "13.9", "parent": "天王星 (Uranus)"},
+    "7004": {"name": "天卫四 Oberon (U4)", "diameter": "1,523 km", "angular_size": "约 0.11″", "mag": "14.1", "parent": "天王星 (Uranus)"},
+    "7005": {"name": "天卫五 Miranda (U5)", "diameter": "472 km", "angular_size": "约 0.03″", "mag": "16.5", "parent": "天王星 (Uranus)"},
+    "7000": {"name": "天王星 Uranus (中心)", "diameter": "50,724 km", "angular_size": "约 3.7″", "mag": "5.6", "parent": "天王星"},
+
+    # 木星系统 (Jupiter)
+    "10001": {"name": "木卫六 Himalia (J6)", "diameter": "170 km", "angular_size": "约 0.05″", "mag": "14.8", "parent": "木星 (Jupiter)"},
+    "10002": {"name": "木卫七 Elara (J7)", "diameter": "86 km", "angular_size": "约 0.03″", "mag": "16.3", "parent": "木星 (Jupiter)"},
+    "10003": {"name": "木卫八 Pasiphae (J8)", "diameter": "60 km", "angular_size": "约 0.02″", "mag": "17.0", "parent": "木星 (Jupiter)"},
+    "10004": {"name": "木卫九 Sinope (J9)", "diameter": "38 km", "angular_size": "约 0.01″", "mag": "18.3", "parent": "木星 (Jupiter)"},
+    "5001": {"name": "木卫一 Io (J1)", "diameter": "3,643 km", "angular_size": "约 1.2″", "mag": "5.0", "parent": "木星 (Jupiter)"},
+    "5002": {"name": "木卫二 Europa (J2)", "diameter": "3,122 km", "angular_size": "约 1.0″", "mag": "5.3", "parent": "木星 (Jupiter)"},
+    "5003": {"name": "木卫三 Ganymede (J3)", "diameter": "5,268 km", "angular_size": "约 1.7″", "mag": "4.6", "parent": "木星 (Jupiter)"},
+    "5004": {"name": "木卫四 Callisto (J4)", "diameter": "4,821 km", "angular_size": "约 1.5″", "mag": "5.6", "parent": "木星 (Jupiter)"},
+    "5000": {"name": "木星 Jupiter (中心)", "diameter": "139,820 km", "angular_size": "约 48.0″", "mag": "-2.7", "parent": "木星"},
+}
+
+def calculate_alt_az(stamp_utc: datetime, ra_str: str, dec_str: str, obs_code: str = "286") -> dict:
+    station_code = str(obs_code).strip()
+    if station_code == "500" or station_code not in OBSERVATORIES:
+        calc_station = OBSERVATORIES["286"]
+    else:
+        calc_station = OBSERVATORIES[station_code]
+
+    lat = calc_station["lat"]
+    lon = calc_station["lon"]
+    alt_m = calc_station["alt"]
+
+    ra_parts = ra_str.split()
+    ra_h = int(ra_parts[0]) + int(ra_parts[1]) / 60.0 + float(ra_parts[2]) / 3600.0
+
+    dec_parts = dec_str.split()
+    is_neg = dec_parts[0].startswith("-") or dec_parts[1].startswith("-") or dec_parts[2].startswith("-")
+    d_val = abs(int(dec_parts[0]))
+    m_val = abs(int(dec_parts[1]))
+    s_val = abs(float(dec_parts[2]))
+    dec_d = d_val + m_val / 60.0 + s_val / 3600.0
+    if is_neg:
+        dec_d = -dec_d
+
+    alt_deg = None
+    az_deg = None
+
+    if HAS_ASTROPY:
+        try:
+            loc = EarthLocation(lat=lat * u.deg, lon=lon * u.deg, height=alt_m * u.m)
+            sc = SkyCoord(ra=ra_h * 15.0 * u.deg, dec=dec_d * u.deg, frame="icrs")
+            t = Time(stamp_utc, scale="utc")
+            altaz = sc.transform_to(AltAz(obstime=t, location=loc))
+            alt_deg = float(altaz.alt.deg)
+            az_deg = float(altaz.az.deg)
+        except Exception:
+            pass
+
+    if alt_deg is None:
+        y, m, d = stamp_utc.year, stamp_utc.month, stamp_utc.day
+        h = stamp_utc.hour + stamp_utc.minute / 60.0 + stamp_utc.second / 3600.0
+        if m <= 2:
+            y -= 1
+            m += 12
+        A = math.floor(y / 100)
+        B = 2 - A + math.floor(A / 4)
+        jd = math.floor(365.25 * (y + 4716)) + math.floor(30.6001 * (m + 1)) + d + B - 1524.5 + h / 24.0
+        d_t = jd - 2451545.0
+        gmst = (280.46061837 + 360.98564736629 * d_t) % 360.0
+        lmst = (gmst + lon) % 360.0
+        ha_deg = (lmst - (ra_h * 15.0)) % 360.0
+
+        ha_rad = math.radians(ha_deg)
+        dec_rad = math.radians(dec_d)
+        lat_rad = math.radians(lat)
+
+        sin_alt = math.sin(lat_rad) * math.sin(dec_rad) + math.cos(lat_rad) * math.cos(dec_rad) * math.cos(ha_rad)
+        alt_deg = math.degrees(math.asin(max(-1.0, min(1.0, sin_alt))))
+
+        cos_az = (math.sin(dec_rad) - math.sin(lat_rad) * sin_alt) / (math.cos(lat_rad) * math.cos(math.radians(alt_deg)) + 1e-12)
+        sin_az = -math.cos(dec_rad) * math.sin(ha_rad) / (math.cos(math.radians(alt_deg)) + 1e-12)
+        az_deg = (math.degrees(math.atan2(sin_az, cos_az))) % 360.0
+
+    sign = "+" if alt_deg >= 0 else "-"
+    abs_alt = abs(alt_deg)
+    d = int(abs_alt)
+    m = int((abs_alt - d) * 60)
+
+    if alt_deg >= 30.0:
+        obs_status = "observable"
+        status_text = "适测 (≥30°)"
+    elif alt_deg >= 0:
+        obs_status = "low"
+        status_text = "低空 (<30°)"
+    else:
+        obs_status = "below_horizon"
+        status_text = "地平线下"
+
+    return {
+        "alt_deg": round(alt_deg, 2),
+        "alt_str": f"{alt_deg:+.1f}°",
+        "alt_dms": f"{sign}{d}°{m:02d}'",
+        "az_deg": round(az_deg, 1) if az_deg is not None else None,
+        "is_observable": alt_deg >= 30.0,
+        "obs_status": obs_status,
+        "status_text": status_text,
+        "station_name": calc_station.get("name", "云南天文台昆明 1m望远镜"),
+        "station_code": "286" if (station_code == "500" or station_code not in OBSERVATORIES) else station_code,
+    }
+
+
+def parse_ephemeris(pre_content: str, observatory: str = "286", satellite: str = "") -> list[dict[str, Any]]:
+    """Parse the data rows returned inside MSU's ``pre`` block and compute Alt relative to Yunnan Observatory."""
     results = []
+    meta = TARGET_METADATA.get(str(satellite), {})
     for line in pre_content.splitlines():
         stripped = line.strip()
         if not re.match(r"\d{4}\s+\d+\s+\d+", stripped):
@@ -209,12 +348,26 @@ def parse_ephemeris(pre_content: str) -> list[dict[str, str]]:
             continue
         rah, ram, ras = ra_pure.split()
         ded, dem, des = de_pure.split()
+
+        alt_info = calculate_alt_az(stamp, ra_pure, de_pure, obs_code=observatory)
+
         results.append({
             "time": stamp.strftime("%Y-%m-%d %H:%M:%S"),
             "ra": f"{rah}h {ram}m {ras}s",
             "de": f"{ded}° {dem}' {des}\"",
             "ra_pure": ra_pure,
             "de_pure": de_pure,
+            "alt_deg": alt_info["alt_deg"],
+            "alt_str": alt_info["alt_str"],
+            "alt_dms": alt_info["alt_dms"],
+            "az_deg": alt_info["az_deg"],
+            "is_observable": alt_info["is_observable"],
+            "obs_status": alt_info["obs_status"],
+            "status_text": alt_info["status_text"],
+            "station_name": alt_info["station_name"],
+            "diameter": meta.get("diameter", "--"),
+            "angular_size": meta.get("angular_size", "--"),
+            "mag": meta.get("mag", "--"),
         })
     return results
 
@@ -252,10 +405,25 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
                 "请输入该自然卫星服务的代码，例如 5001（木卫一）；通用月球代码 301 不适用"
             ),
         }
-    results = parse_ephemeris(pre_content)
+    results = parse_ephemeris(pre_content, observatory=observatory, satellite=satellite)
     if not results:
         return {"success": False, "message": "未从星历服务器返回内容中解析到数据"}
-    return {"success": True, "data": results}
+
+    target_info = TARGET_METADATA.get(str(satellite), {
+        "name": f"天体 {satellite}",
+        "diameter": "--",
+        "angular_size": "--",
+        "mag": "--",
+        "parent": "--"
+    })
+    station = OBSERVATORIES.get(str(observatory), OBSERVATORIES["286"])
+
+    return {
+        "success": True,
+        "data": results,
+        "target_info": target_info,
+        "station": station
+    }
 
 
 def _safe_download_name(value: str) -> str:
@@ -348,13 +516,6 @@ def favicon():
     # This historical asset is JPEG-encoded despite its .png filename.
     return send_file(Path(app.root_path) / "static" / "favicon.png", mimetype="image/jpeg")
 
-
-
-OBSERVATORIES = {
-    "286": {"name": "云南天文台昆明 1m望远镜", "lat": 25.0294, "lon": 102.7883, "alt": 2000.0},
-    "O07": {"name": "云南天文台丽江 2.4m望远镜", "lat": 26.6950, "lon": 100.0300, "alt": 3200.0},
-    "500": {"name": "地心坐标", "lat": 0.0, "lon": 0.0, "alt": 0.0},
-}
 
 _SCHEDULE_CACHE = {}
 
