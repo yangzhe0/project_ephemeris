@@ -217,7 +217,7 @@
                                     <!-- 按钮前景文字 -->
                                     <div class="relative z-10 flex items-center justify-between w-full">
                                         <span class="font-bold text-xs text-gray-800 tracking-wide sat-name group-hover:text-blue-600 transition-colors">{{ sat.name.split(' ')[0] }}</span>
-                                        <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-600 bg-white/80 shadow-xs backdrop-blur-xs sat-status-badge">--%</span>
+                                        <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-600 bg-white/80 shadow-xs backdrop-blur-xs sat-status-badge">--</span>
                                     </div>
                                     
                                     <!-- 选中状态高亮外边框 -->
@@ -531,7 +531,7 @@
                     const badge = label.querySelector('.sat-status-badge');
                     if (!pInfo || !pBar || !badge) return;
 
-                    badge.innerText = pInfo.badge || '--%';
+                    badge.innerText = pInfo.badge || '--';
                     label.title = pInfo.tooltip || '';
 
                     if (pInfo.status === 'observing') {
@@ -1151,7 +1151,7 @@
                 <div>
                     <h4 class="font-bold text-gray-900 text-base mb-2">1. 目标天体与备选列表</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>常用天体按钮平铺（含动态进度条）</strong>：左侧平铺展示当夜最关键的 10 个常用目标按钮（海卫一/二、土卫八/九/一~七、天卫一~五、木卫六~九），<strong>按钮底色动态展示当夜剩余可观测时长百分比</strong>（绿色 ≥30% 充足，橙色 &lt;30% 抓紧观测，蓝色待升，灰色已落），点击任一按钮即刻联动自动计算并更新寻星图。</li>
+                        <li><strong>常用天体按钮平铺（含动态进度条）</strong>：左侧平铺展示当夜最关键的 10 个常用目标按钮（海卫一/二、土卫八/九/一~七、天卫一~五、木卫六~九），<strong>按钮底色动态展示当夜剩余可观测时长比例</strong>（绿色 ≥30% 充裕，橙色 &lt;30% 抓紧观测，蓝色待升，灰色已落），<strong>右侧徽章直观标明距观测结束剩余时间</strong>（如“剩 2.5h”、“剩 45m”或“21:58开”），点击任一按钮即刻联动自动计算并更新寻星图。</li>
                         <li><strong>备选天然卫星下拉列表</strong>：在 10 个主按钮下方提供备选下拉菜单，分类收录木星伽利略卫星（<code>5001</code>~<code>5004</code>）、土星其他天然卫星（<code>6002</code>~<code>6007</code>）、天王星卫星（<code>7002</code>~<code>7005</code>）及各大行星本体中心编号，点选即自动重算。</li>
                         <li><strong>手动输入编号</strong>：备选下拉菜单最后一项为“✏️ 自己手动输入编号...”，选择后展开输入框，可输入任意自然卫星代码（如 <code>5001</code>）按回车直接计算。</li>
                     </ul>

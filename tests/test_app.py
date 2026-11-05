@@ -183,6 +183,9 @@ class EphemerisTests(unittest.TestCase):
         self.assertTrue(data["planets"]["neptune"]["valid"])
         self.assertEqual(data["planets"]["neptune"]["status"], "observing")
         self.assertGreater(data["planets"]["neptune"]["pct"], 0)
+        # Verify countdown badge replaces percentage text
+        self.assertTrue(data["planets"]["neptune"]["badge"].startswith("剩 "))
+        self.assertTrue(data["planets"]["neptune"]["badge"].endswith("h") or data["planets"]["neptune"]["badge"].endswith("m"))
 
     def test_calculate_alt_az_for_kunming(self):
         """Verify altitude calculation relative to Yunnan Observatory Kunming 1m station."""

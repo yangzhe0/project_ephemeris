@@ -716,11 +716,17 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
             rem_sec = (et - bjt_dt).total_seconds()
             pct = max(0, min(100, round((rem_sec / tot_sec) * 100)))
             rem_h = rem_sec / 3600.0
+            if rem_h >= 1.0:
+                rem_str = f"剩 {rem_h:.1f}h"
+            else:
+                rem_m = max(1, round(rem_sec / 60.0))
+                rem_str = f"剩 {rem_m}m"
+
             planets_eval[p_key] = {
                 "valid": True, "status": "observing", "pct": pct,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
-                "badge": f"{pct}%",
-                "tooltip": f"【可观测】剩余 {rem_h:.1f}小时 (至 {p_info['end']})，窗口总长: {p_info['start']} ~ {p_info['end']}"
+                "badge": rem_str,
+                "tooltip": f"【可观测】距观测结束还剩 {rem_h:.1f}小时 (至 {p_info['end']} 截止，高度角>30°)，窗口总长: {p_info['start']} ~ {p_info['end']}"
             }
             if not found_best:
                 for cand_p, cand_code in priority_order:
