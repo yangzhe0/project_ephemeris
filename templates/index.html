@@ -593,8 +593,11 @@
                         nightBadge.innerText = `[500] 全天无地平`;
                         nightBadge.parentElement.title = `地心坐标 (500) · 全天无地平限制`;
                     } else if (data.twilight && data.twilight.dusk && data.twilight.dusk !== '--:--') {
-                        nightBadge.innerText = `[${stCode}${namePart}] 暗夜 ${data.twilight.dusk} ~ ${data.twilight.dawn}`;
-                        nightBadge.parentElement.title = `测站 [${stCode}] ${data.station.name || ''} · ${data.night_date} 暗夜时刻: ${data.twilight.dusk} ~ ${data.twilight.dawn}`;
+                        const tw = data.twilight;
+                        const sunrisePart = (tw.sunrise && tw.sunrise !== '--:--') ? ` (日出 ${tw.sunrise})` : '';
+                        nightBadge.innerText = `[${stCode}${namePart}] 暗夜 ${tw.dusk} ~ ${tw.dawn}${sunrisePart}`;
+                        const lagText = tw.solar_offset_min ? ` · 平太阳时时差 ${tw.solar_offset_min > 0 ? '+' : ''}${tw.solar_offset_min}分` : '';
+                        nightBadge.parentElement.title = `测站 [${stCode}] ${data.station.name || ''}${lagText} · ${data.night_date} 观测窗口: 适测暗夜 ${tw.dusk} ~ ${tw.dawn} (深空纯暗夜 ${tw.dusk_astro || tw.dusk} ~ ${tw.dawn_astro || tw.dawn}，当地日出 ${tw.sunrise || '--:--'})`;
                     } else {
                         nightBadge.innerText = `[${stCode}${namePart}] 暗夜数据计算中...`;
                     }

@@ -635,26 +635,48 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
         frame = AltAz(obstime=times, location=loc)
 
         sun_alt = get_sun(times).transform_to(frame).alt.deg
+        # 1. 深空纯暗夜：太阳高度角 <= -18° (无任何日光散射)
         dark_mask = sun_alt <= -18.0
-        dark_indices = np.where(dark_mask)[0]
+        # 2. 航海晨昏：太阳高度角 <= -12° (天文学大行星与天然卫星适测极限，肉眼满天繁星)
+        obs_mask = sun_alt <= -12.0
+        # 3. 日出地平：太阳高度角 <= -0.833°
+        sun_mask = sun_alt <= -0.833
 
-        if len(dark_indices) > 0:
-            dark_start = dt_list[dark_indices[0]]
-            dark_end = dt_list[dark_indices[-1]]
+        dark_indices = np.where(dark_mask)[0]
+        obs_indices = np.where(obs_mask)[0]
+        sun_indices = np.where(sun_mask)[0]
+
+        solar_diff_min = round((station.get("lon", 120.0) - 120.0) * 4.0)
+
+        if len(obs_indices) > 0:
+            dark_start = dt_list[dark_indices[0]] if len(dark_indices) > 0 else dt_list[obs_indices[0]]
+            dark_end = dt_list[dark_indices[-1]] if len(dark_indices) > 0 else dt_list[obs_indices[-1]]
+            obs_start = dt_list[obs_indices[0]]
+            obs_end = dt_list[obs_indices[-1]]
+            sunrise_dt = dt_list[min(sun_indices[-1] + 1, len(dt_list) - 1)] if len(sun_indices) > 0 else None
+
             twilight = {
-                "dusk": dark_start.strftime("%H:%M"),
-                "dawn": dark_end.strftime("%H:%M"),
-                "dusk_iso": dark_start.isoformat(),
-                "dawn_iso": dark_end.isoformat(),
+                "dusk": obs_start.strftime("%H:%M"),
+                "dawn": obs_end.strftime("%H:%M"),
+                "dusk_astro": dark_start.strftime("%H:%M"),
+                "dawn_astro": dark_end.strftime("%H:%M"),
+                "sunrise": sunrise_dt.strftime("%H:%M") if sunrise_dt else "--:--",
+                "solar_offset_min": solar_diff_min,
+                "dusk_iso": obs_start.isoformat(),
+                "dawn_iso": obs_end.isoformat(),
             }
         else:
-            twilight = {"dusk": "--:--", "dawn": "--:--"}
+            twilight = {
+                "dusk": "--:--", "dawn": "--:--", "dawn_astro": "--:--", "sunrise": "--:--",
+                "solar_offset_min": solar_diff_min
+            }
 
         planets_data = {}
         for p_key, p_name in [("neptune", "neptune"), ("saturn", "saturn"), ("uranus", "uranus"), ("jupiter", "jupiter")]:
             body = get_body(p_name, times, location=loc)
             alt = body.transform_to(frame).alt.deg
-            valid_mask = (alt >= 30.0) & dark_mask
+            # 采用天然卫星实测的航海晨光标准 (Sun <= -12°)，避免 6 点天还漆黑时过早切断可用观测机时
+            valid_mask = (alt >= 30.0) & obs_mask
             valid_indices = np.where(valid_mask)[0]
 
             if len(valid_indices) > 0:
