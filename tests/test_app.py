@@ -183,9 +183,20 @@ class EphemerisTests(unittest.TestCase):
         self.assertTrue(data["planets"]["neptune"]["valid"])
         self.assertEqual(data["planets"]["neptune"]["status"], "observing")
         self.assertGreater(data["planets"]["neptune"]["pct"], 0)
-        # Verify countdown badge replaces percentage text
-        self.assertTrue(data["planets"]["neptune"]["badge"].startswith("剩 "))
-        self.assertTrue(data["planets"]["neptune"]["badge"].endswith("h") or data["planets"]["neptune"]["badge"].endswith("m"))
+        # Verify countdown badge includes altitude prefix and countdown
+        badge = data["planets"]["neptune"]["badge"]
+        self.assertIn("°", badge)
+        self.assertIn("剩", badge)
+        self.assertTrue(badge.endswith("h") or badge.endswith("m"))
+        self.assertIsNotNone(data["planets"]["neptune"].get("alt_deg"))
+
+        # Verify unspaced 14-digit time format (20261105213000)
+        res_unspaced = self.client.get("/api/observation_status?obs=286&time=20261105213000")
+        self.assertEqual(res_unspaced.status_code, 200)
+        data_unspaced = res_unspaced.json
+        self.assertTrue(data_unspaced["success"])
+        self.assertEqual(data_unspaced["night_date"], "2026-11-05")
+        self.assertIn("°", data_unspaced["planets"]["neptune"]["badge"])
 
     def test_calculate_alt_az_for_kunming(self):
         """Verify altitude calculation relative to Yunnan Observatory Kunming 1m station."""

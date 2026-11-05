@@ -684,6 +684,21 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
         }
     })
 
+    station = get_observatory(obs_code)
+
+    # 动态计算该测站在 bjt_dt 瞬间的各大行星实时高度角 (Astropy 耗时仅约 0.04s)
+    current_alts = {}
+    if HAS_ASTROPY and station.get("code") != "500":
+        try:
+            loc_curr = EarthLocation(lat=station["lat"] * u.deg, lon=station["lon"] * u.deg, height=station["alt"] * u.m)
+            t_curr = Time(bjt_dt)
+            frame_curr = AltAz(obstime=t_curr, location=loc_curr)
+            for p_key, p_name in [("neptune", "neptune"), ("saturn", "saturn"), ("uranus", "uranus"), ("jupiter", "jupiter")]:
+                alt_deg = float(get_body(p_name, t_curr, location=loc_curr).transform_to(frame_curr).alt.deg)
+                current_alts[p_key] = alt_deg
+        except Exception:
+            pass
+
     planets_eval = {}
     best_candidate = "8001"
     priority_order = [("neptune", "8001"), ("saturn", "6008"), ("saturn", "6001"), ("uranus", "7001"), ("jupiter", "10001")]
@@ -694,6 +709,15 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
             planets_eval[p_key] = {"valid": False, "status": "none", "pct": 0, "badge": "无窗口"}
             continue
 
+        alt_val = current_alts.get(p_key)
+        if alt_val is not None:
+            round_alt = round(alt_val)
+            alt_prefix = f"+{round_alt}° " if round_alt >= 0 else f"{round_alt}° "
+            alt_tip_str = f"当前高度角 {alt_val:+.1f}° · "
+        else:
+            alt_prefix = ""
+            alt_tip_str = ""
+
         st = datetime.fromisoformat(p_info["start_iso"])
         et = datetime.fromisoformat(p_info["end_iso"])
         tot_sec = (et - st).total_seconds()
@@ -702,15 +726,17 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
             planets_eval[p_key] = {
                 "valid": True, "status": "waiting", "pct": 100,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
-                "badge": f"{p_info['start']}开",
-                "tooltip": f"【待开启】今晚窗口: {p_info['start']} ~ {p_info['end']} (预计 {p_info['start']} 升至30°)"
+                "alt_deg": alt_val,
+                "badge": f"{alt_prefix}{p_info['start']}开",
+                "tooltip": f"【待开启】{alt_tip_str}今晚窗口: {p_info['start']} ~ {p_info['end']} (预计 {p_info['start']} 升至30°)"
             }
         elif bjt_dt > et:
             planets_eval[p_key] = {
                 "valid": True, "status": "ended", "pct": 0,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
-                "badge": "已落",
-                "tooltip": f"【已落】窗口已结束 (已于 {p_info['end']} 降至30°以下)"
+                "alt_deg": alt_val,
+                "badge": f"{alt_prefix}已落" if alt_prefix else "已落",
+                "tooltip": f"【已落】{alt_tip_str}窗口已结束 (已于 {p_info['end']} 降至30°以下)"
             }
         else:
             rem_sec = (et - bjt_dt).total_seconds()
@@ -725,8 +751,9 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
             planets_eval[p_key] = {
                 "valid": True, "status": "observing", "pct": pct,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
-                "badge": rem_str,
-                "tooltip": f"【可观测】距观测结束还剩 {rem_h:.1f}小时 (至 {p_info['end']} 截止，高度角>30°)，窗口总长: {p_info['start']} ~ {p_info['end']}"
+                "alt_deg": alt_val,
+                "badge": f"{alt_prefix}{rem_str}",
+                "tooltip": f"【可观测】{alt_tip_str}距观测结束还剩 {rem_h:.1f}小时 (至 {p_info['end']} 截止，高度角>30°)，窗口总长: {p_info['start']} ~ {p_info['end']}"
             }
             if not found_best:
                 for cand_p, cand_code in priority_order:
@@ -751,12 +778,31 @@ def observation_status():
     time_str = request.args.get("time", "").strip()
     bjt_dt = None
     if time_str:
-        for fmt in ["%Y-%m-%d %H:%M:%S", "%Y %m %d %H %M %S", "%Y-%m-%d"]:
+        # 支持无空格 14位/12位/8位连续时间格式，以及标准横杠/空格格式
+        clean_digits = "".join(c for c in time_str if c.isdigit())
+        if len(clean_digits) == 14:
             try:
-                bjt_dt = datetime.strptime(time_str, fmt)
-                break
+                bjt_dt = datetime.strptime(clean_digits, "%Y%m%d%H%M%S")
             except ValueError:
                 pass
+        elif len(clean_digits) == 12:
+            try:
+                bjt_dt = datetime.strptime(clean_digits, "%Y%m%d%H%M")
+            except ValueError:
+                pass
+        elif len(clean_digits) == 8:
+            try:
+                bjt_dt = datetime.strptime(clean_digits, "%Y%m%d").replace(hour=21, minute=0, second=0)
+            except ValueError:
+                pass
+
+        if bjt_dt is None:
+            for fmt in ["%Y-%m-%d %H:%M:%S", "%Y %m %d %H %M %S", "%Y-%m-%d", "%Y/%m/%d %H:%M:%S"]:
+                try:
+                    bjt_dt = datetime.strptime(time_str, fmt)
+                    break
+                except ValueError:
+                    pass
     return jsonify(compute_dynamic_windows(bjt_dt, obs))
 
 

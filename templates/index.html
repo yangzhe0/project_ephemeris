@@ -217,7 +217,7 @@
                                     <!-- 按钮前景文字 -->
                                     <div class="relative z-10 flex items-center justify-between w-full">
                                         <span class="font-bold text-xs text-gray-800 tracking-wide sat-name group-hover:text-blue-600 transition-colors">{{ sat.name.split(' ')[0] }}</span>
-                                        <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-600 bg-white/80 shadow-xs backdrop-blur-xs sat-status-badge">--</span>
+                                        <span class="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-600 bg-white/80 shadow-xs backdrop-blur-xs sat-status-badge whitespace-nowrap">--</span>
                                     </div>
                                     
                                     <!-- 选中状态高亮外边框 -->
@@ -279,14 +279,15 @@
                         <!-- 观测时间 (北京时间 +8) -->
                         <div>
                             <label class="block text-xs font-medium text-gray-700 mb-1">观测时间 (北京时间 +8)</label>
-                            <input type="text" id="localTimeInput" placeholder="留空默认使用当前瞬时时刻，或输入 2026 11 05 21 30 00"
-                                onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();}"
+                            <input type="text" id="localTimeInput" placeholder="留空默认当前时刻，或输入如 20261105213000"
+                                onchange="onLocalTimeChange()"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();updateObservationProgress(false);}"
                                 class="w-full border border-gray-300 rounded-lg p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none">
                             <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                                 </svg>
-                                留空即直接按当前瞬时时间自动计算
+                                留空为当前时刻；支持 20261105213000 无空格连续时间直接输入
                             </p>
                         </div>
 
@@ -482,14 +483,79 @@
 
     <script>
 
-        // --- 观测时间窗口与每分钟底色进度条刷新逻辑 (完全由后端天体力学动态计算驱动) ---
+        // 解析观测时间：支持 20261105213000 无空格连续纯数字，以及标准带空格/横杠格式
+        function parseLocalObservationTime(inputStr) {
+            if (!inputStr) return null;
+            const s = inputStr.trim();
+            const digits = s.replace(/\D/g, '');
+            let Y, M, D, h = 21, m = 0, sec = 0;
+
+            if (digits.length === 14) {
+                // YYYYMMDDHHmmss (如 20261105213000)
+                Y = parseInt(digits.slice(0, 4));
+                M = parseInt(digits.slice(4, 6)) - 1;
+                D = parseInt(digits.slice(6, 8));
+                h = parseInt(digits.slice(8, 10));
+                m = parseInt(digits.slice(10, 12));
+                sec = parseInt(digits.slice(12, 14));
+            } else if (digits.length === 12) {
+                // YYYYMMDDHHmm (如 202611052130)
+                Y = parseInt(digits.slice(0, 4));
+                M = parseInt(digits.slice(4, 6)) - 1;
+                D = parseInt(digits.slice(6, 8));
+                h = parseInt(digits.slice(8, 10));
+                m = parseInt(digits.slice(10, 12));
+                sec = 0;
+            } else if (digits.length === 8) {
+                // YYYYMMDD (如 20261105)
+                Y = parseInt(digits.slice(0, 4));
+                M = parseInt(digits.slice(4, 6)) - 1;
+                D = parseInt(digits.slice(6, 8));
+                h = 21; m = 0; sec = 0;
+            } else {
+                const cleanStr = s.replace(/[-:/]/g, ' ').trim();
+                const parts = cleanStr.split(/\s+/);
+                if (parts.length >= 3 && parts.every(p => /^\d+$/.test(p))) {
+                    Y = parseInt(parts[0]);
+                    M = parseInt(parts[1]) - 1;
+                    D = parseInt(parts[2]);
+                    h = parts.length > 3 ? parseInt(parts[3]) : 21;
+                    m = parts.length > 4 ? parseInt(parts[4]) : 0;
+                    sec = parts.length > 5 ? parseInt(parts[5]) : 0;
+                } else {
+                    return { error: '时间格式无效，请输入如 20261105213000 或 2026 11 05 21 30 00' };
+                }
+            }
+
+            const testDate = new Date(Date.UTC(Y, M, D, h, m, sec));
+            if (testDate.getUTCFullYear() !== Y || testDate.getUTCMonth() !== M || testDate.getUTCDate() !== D ||
+                testDate.getUTCHours() !== h || testDate.getUTCMinutes() !== m || testDate.getUTCSeconds() !== sec) {
+                return { error: '时间数值越界，请检查月份(1-12)、日期及小时(0-23)' };
+            }
+
+            const utcDate = new Date(Date.UTC(Y, M, D, h - 8, m, sec));
+            const pad = n => n.toString().padStart(2, '0');
+            const initmom = `${utcDate.getUTCFullYear()} ${pad(utcDate.getUTCMonth() + 1)} ${pad(utcDate.getUTCDate())} ${pad(utcDate.getUTCHours())} ${pad(utcDate.getUTCMinutes())} ${pad(utcDate.getUTCSeconds())}`;
+            const bjtIso = `${Y}-${pad(M + 1)}-${pad(D)} ${pad(h)}:${pad(m)}:${pad(sec)}`;
+
+            return { initmom, bjtIso, error: null };
+        }
+
+        function onLocalTimeChange() {
+            updateObservationProgress(false);
+        }
+
+        // --- 观测时间窗口与实时高度角刷新 (纯后台异步拉取，绝不阻塞当前星出图) ---
         async function updateObservationProgress(isInitial = false) {
             const obs = document.getElementById('observatory').value || '286';
             const localInput = document.getElementById('localTimeInput').value.trim();
 
             let url = `/api/observation_status?obs=${encodeURIComponent(obs)}`;
             if (localInput) {
-                url += `&time=${encodeURIComponent(localInput)}`;
+                const parsed = parseLocalObservationTime(localInput);
+                if (parsed && !parsed.error) {
+                    url += `&time=${encodeURIComponent(parsed.bjtIso)}`;
+                }
             }
 
             try {
@@ -522,7 +588,7 @@
                     stBadge.innerText = `${stCode} ${shortName}`;
                 }
 
-                // 2. 动态更新每个天体按钮的底色进度条和徽标
+                // 2. 动态更新每个天体按钮的实时高度角、底色进度条和徽标
                 const labels = document.querySelectorAll('#satelliteButtonsContainer label[data-planet]');
                 labels.forEach(label => {
                     const planet = label.getAttribute('data-planet');
@@ -538,32 +604,21 @@
                         pBar.style.width = `${pInfo.pct}%`;
                         if (pInfo.pct > 30) {
                             pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-emerald-100/80 transition-all duration-700 ease-out pointer-events-none';
-                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-emerald-700 bg-white/90 shadow-xs sat-status-badge';
+                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-emerald-700 bg-white/90 shadow-xs sat-status-badge whitespace-nowrap';
                         } else {
                             pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-amber-100/90 transition-all duration-700 ease-out pointer-events-none';
-                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-amber-700 bg-white/90 shadow-xs sat-status-badge';
+                            badge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-amber-700 bg-white/90 shadow-xs sat-status-badge whitespace-nowrap';
                         }
                     } else if (pInfo.status === 'waiting') {
                         pBar.style.width = '100%';
                         pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-blue-50/70 border-r border-blue-200 transition-all duration-700 ease-out pointer-events-none';
-                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-blue-600 bg-blue-50/90 shadow-xs sat-status-badge';
+                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-blue-600 bg-blue-50/90 shadow-xs sat-status-badge whitespace-nowrap';
                     } else {
                         pBar.style.width = '0%';
                         pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-gray-100 transition-all duration-700 ease-out pointer-events-none';
-                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-400 bg-gray-100 shadow-xs sat-status-badge';
+                        badge.className = 'text-[10px] font-mono font-medium px-1.5 py-0.5 rounded text-gray-400 bg-gray-100 shadow-xs sat-status-badge whitespace-nowrap';
                     }
                 });
-
-                // 3. 初始载入时，根据天体力学实时结果自动勾选当前最适目标，并自动发起计算
-                if (isInitial && data.best_target) {
-                    const radio = document.querySelector(`input[name="satellite"][value="${data.best_target}"]`);
-                    if (radio) {
-                        radio.checked = true;
-                    }
-                    setTimeout(() => {
-                        submitCalculation();
-                    }, 300);
-                }
             } catch (e) {
                 console.error("Failed to fetch dynamic observation status:", e);
             }
@@ -637,9 +692,13 @@
             submitCalculation();
         }
 
-        // 页面初始化：调用后端天体力学动态计算，并启动每分钟(60秒)自动刷新
+        // 页面初始化：按导师要求先查当前天体出证认图，后台异步拉取其他天体的高度角与倒计时，互不拉垮时间
         document.addEventListener('DOMContentLoaded', () => {
-            updateObservationProgress(true);
+            // 1. 优先立即提交当前选中星（海卫一），快速出星历表和证认图
+            submitCalculation();
+            // 2. 后台异步拉取所有天体的实时高度角与暗夜窗口
+            updateObservationProgress(false);
+            // 3. 之后每分钟自动静默刷新一次
             setInterval(() => updateObservationProgress(false), 60000);
         });
 
@@ -710,42 +769,19 @@
                 return;
             }
 
-            // 处理时间:北京时间转UTC
+            // 处理时间: 支持 20261105213000 无空格连续时间或标准空格格式，转 UTC 供后端星历使用
             let initmom = '';
             const localInput = document.getElementById('localTimeInput').value.trim();
 
             if (localInput) {
-                // 解析北京时间并转换为UTC
-                const cleanStr = localInput.replace(/[-:]/g, ' ').trim();
-                const parts = cleanStr.split(/\s+/);
-
-                if (parts.length === 6 && parts.every(part => /^\d+$/.test(part))) {
-                    const Y = parseInt(parts[0]);
-                    const M = parseInt(parts[1]) - 1; // Month 0-11
-                    const D = parseInt(parts[2]);
-                    const h = parseInt(parts[3]);
-                    const m = parseInt(parts[4]);
-                    const s = parseInt(parts[5]);
-
-                    const validLocalDate = new Date(Date.UTC(Y, M, D, h, m, s));
-                    if (validLocalDate.getUTCFullYear() !== Y || validLocalDate.getUTCMonth() !== M ||
-                        validLocalDate.getUTCDate() !== D || validLocalDate.getUTCHours() !== h ||
-                        validLocalDate.getUTCMinutes() !== m || validLocalDate.getUTCSeconds() !== s) {
-                        alert("时间数值无效，请检查日期和时分秒");
-                        return;
-                    }
-
-                    // 北京时间固定按 UTC+8 转换
-                    const dateObj = new Date(Date.UTC(Y, M, D, h - 8, m, s));
-
-                    const pad = n => n.toString().padStart(2, '0');
-                    initmom = `${dateObj.getUTCFullYear()} ${pad(dateObj.getUTCMonth() + 1)} ${pad(dateObj.getUTCDate())} ${pad(dateObj.getUTCHours())} ${pad(dateObj.getUTCMinutes())} ${pad(dateObj.getUTCSeconds())}`;
-                } else {
-                    alert("时间格式错误,请使用: YYYY MM DD HH mm ss");
+                const parsed = parseLocalObservationTime(localInput);
+                if (parsed.error) {
+                    alert(parsed.error);
                     return;
                 }
+                initmom = parsed.initmom;
             } else {
-                // 使用当前UTC时间
+                // 留空则使用当前瞬时 UTC 时间
                 const now = new Date();
                 const pad = n => n.toString().padStart(2, '0');
                 initmom = `${now.getUTCFullYear()} ${pad(now.getUTCMonth() + 1)} ${pad(now.getUTCDate())} ${pad(now.getUTCHours())} ${pad(now.getUTCMinutes())} ${pad(now.getUTCSeconds())}`;
@@ -1151,7 +1187,7 @@
                 <div>
                     <h4 class="font-bold text-gray-900 text-base mb-2">1. 目标天体与备选列表</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>常用天体按钮平铺（含动态进度条）</strong>：左侧平铺展示当夜最关键的 10 个常用目标按钮（海卫一/二、土卫八/九/一~七、天卫一~五、木卫六~九），<strong>按钮底色动态展示当夜剩余可观测时长比例</strong>（绿色 ≥30% 充裕，橙色 &lt;30% 抓紧观测，蓝色待升，灰色已落），<strong>右侧徽章直观标明距观测结束剩余时间</strong>（如“剩 2.5h”、“剩 45m”或“21:58开”），点击任一按钮即刻联动自动计算并更新寻星图。</li>
+                        <li><strong>常用天体按钮平铺（实时高度角与倒计时）</strong>：左侧平铺展示当夜最关键的 10 个常用目标按钮，<strong>按钮底色动态展示当夜剩余可观测时长比例</strong>（绿色 ≥30% 充裕，橙色 &lt;30% 抓紧观测，蓝色待升，灰色已落），<strong>右侧徽章在“剩”和“开”前实时标明当前时刻、当前台站的地平高度角</strong>（如 <code>+62° 剩 4.5h</code>、<code>+24° 22:00开</code>、<code>-45° 03:48开</code>），点击任一按钮优先发起当前目标计算并即刻出证认图。</li>
                         <li><strong>备选天然卫星下拉列表</strong>：在 10 个主按钮下方提供备选下拉菜单，分类收录木星伽利略卫星（<code>5001</code>~<code>5004</code>）、土星其他天然卫星（<code>6002</code>~<code>6007</code>）、天王星卫星（<code>7002</code>~<code>7005</code>）及各大行星本体中心编号，点选即自动重算。</li>
                         <li><strong>手动输入编号</strong>：备选下拉菜单最后一项为“✏️ 自己手动输入编号...”，选择后展开输入框，可输入任意自然卫星代码（如 <code>5001</code>）按回车直接计算。</li>
                     </ul>
