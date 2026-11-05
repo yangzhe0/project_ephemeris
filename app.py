@@ -113,9 +113,8 @@ def _parse_coordinates(ra: str, dec: str) -> tuple[str, str]:
     if ded_val > 90 or dem_val > 59 or des_val >= 60 or (ded_val == 90 and (dem_val or des_val)):
         raise ValueError("赤纬超出有效范围")
 
-    sign = "-" if is_negative else ("+" if raw_d.startswith("+") else "")
-    if is_negative and not sign:
-        sign = "-"
+    # 赤纬统一明确携带正负号（正赤纬强制带 +，负赤纬带 -）
+    sign = "-" if is_negative else "+"
 
     # 规范化：统一使用两位数补零，如 00 08 10.22 及 -00 39 24.88
     clean_des = raw_s.lstrip("+-")

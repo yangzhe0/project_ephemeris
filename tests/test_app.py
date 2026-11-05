@@ -82,6 +82,19 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(rows[1]["time"], "2026-11-05 13:00:00")
         self.assertEqual(rows[1]["de_pure"], "-00 39 25.123456")
 
+    def test_parse_ephemeris_positive_dec_includes_plus_sign(self):
+        """Verify that positive declinations explicitly include the '+' sign."""
+        rows = ephemeris.parse_ephemeris("2026 11 05 12 00 00.00  09 48 01.668737  14 01 50.403843")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["de_pure"], "+14 01 50.403843")
+        self.assertEqual(rows[0]["de"], "+14° 01' 50.403843\"")
+
+        # Zero degree positive
+        rows_zero = ephemeris.parse_ephemeris("2026 11 05 12 00 00.00  00 08 10.224206  0 39 24.875698")
+        self.assertEqual(len(rows_zero), 1)
+        self.assertEqual(rows_zero[0]["de_pure"], "+00 39 24.875698")
+        self.assertEqual(rows_zero[0]["de"], "+00° 39' 24.875698\"")
+
     def test_parse_ephemeris_skips_invalid_coordinate(self):
         self.assertEqual(
             ephemeris.parse_ephemeris("2026 09 10 04 05 06 25 00 00 00 00 00"),
