@@ -44,6 +44,14 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(favicon.mimetype, "image/jpeg")
         favicon.close()
 
+    def test_stellarium_simulation_integration(self):
+        index = self.client.get("/")
+        self.assertEqual(index.status_code, 200)
+        self.assertIn("Stellarium 星象".encode("utf-8"), index.data)
+        self.assertIn(b"openStellariumSimulation", index.data)
+        self.assertIn(b"resolveStellariumPlanet", index.data)
+        self.assertIn(b"renderPreviewActions", index.data)
+
     def test_preset_satellites_cover_tonight_outline(self):
         """Ensure all required satellites from observation outline are present."""
         codes = {s["code"] for s in ephemeris.SATELLITES}

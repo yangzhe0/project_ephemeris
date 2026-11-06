@@ -581,6 +581,11 @@
                 const data = await res.json();
                 if (!data || !data.success) return;
 
+                // 同步当前测站元数据（保证切换任意台站时均可实时感知坐标与海拔）
+                if (data.station) {
+                    currentStation = data.station;
+                }
+
                 // 1. 更新顶部当夜状态指示徽标与测站徽标（按台站编号显示）
                 const nightBadge = document.getElementById('nightBadge');
                 if (nightBadge && data.station) {
@@ -891,9 +896,11 @@
             errorMsg.classList.remove('hidden');
         }
 
-        // 渲染结果列表（含云南台高度角与直径）
+        // 渲染结果列表（含测站高度角与直径）
         let currentTargetInfo = null;
         let currentStation = null;
+        let currentPreviewItem = null;
+        let currentPreviewSatellite = null;
 
         function renderResults(data, targetInfo = currentTargetInfo, station = currentStation) {
             const container = document.getElementById('resultCards');
@@ -974,7 +981,7 @@
                                 const angText = item.angular_size && item.angular_size !== '--' ? item.angular_size : angularSize;
 
                                 return `
-                                <tr class="hover:bg-blue-50/60 transition ${index === 0 ? 'bg-blue-50/20' : ''}">
+                                <tr class="hover:bg-blue-50/60 transition cursor-pointer ${index === 0 ? 'bg-blue-50/20' : ''}" onclick="handlePreviewDSS(${index})" title="点击切换该时刻寻星图并同步 Stellarium 模拟">
                                     <td class="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">${item.time}</td>
                                     <td class="px-3 py-2.5 whitespace-nowrap text-center">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${altColor}">
@@ -986,7 +993,7 @@
                                     <td class="px-3 py-2.5 text-blue-700 font-bold whitespace-nowrap">${item.de}</td>
 
                                     <td class="px-3 py-2.5 text-right whitespace-nowrap">
-                                        <button onclick="copyRowCoordinates(${index}, this)" 
+                                        <button onclick="event.stopPropagation(); copyRowCoordinates(${index}, this)" 
                                             class="px-2.5 py-1 text-xs font-medium border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
                                             title="复制赤经赤纬 (可直接粘贴至望远镜控制台)">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1070,6 +1077,9 @@
             // 获取全局 FOV 设置
             const fov = document.getElementById('fov').value || 10;
             const item = currentResults[index];
+            if (!item) return;
+
+            currentPreviewItem = item;
 
             // 准备 UI
             const previewContainer = document.getElementById('previewContainer');
@@ -1079,17 +1089,6 @@
             previewContainer.classList.remove('hidden');
             // 滚动到预览区域
             previewContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            // 如果已经有正在显示的图片且参数相同，则不重新加载（可选优化，这里简化处理，每次都重新加载以确保视场更新）
-
-            // 显示加载状态
-            previewContent.innerHTML = `
-                <div class="flex flex-col items-center gap-3">
-                    <div class="loader block border-white border-t-purple-500"></div>
-                    <p class="text-gray-400 text-sm">正在从 STScI 获取图像 (${fov}' x ${fov}')...</p>
-                </div>
-            `;
-            previewActions.innerHTML = ''; // 清空之前的下载按钮
 
             // 获取卫星名称
             let satelliteName = satelliteNameOverride;
@@ -1109,6 +1108,18 @@
                     satelliteName = currentTargetInfo?.name || "Target";
                 }
             }
+            currentPreviewSatellite = satelliteName;
+
+            // 立即渲染 Stellarium 星象按钮（即使 DSS 加载中或断网也能随时查看 3D 星象）
+            renderPreviewActions(false);
+
+            // 显示加载状态
+            previewContent.innerHTML = `
+                <div class="flex flex-col items-center gap-3">
+                    <div class="loader block border-white border-t-purple-500"></div>
+                    <p class="text-gray-400 text-sm">正在从 STScI 获取图像 (${fov}' x ${fov}')...</p>
+                </div>
+            `;
 
             try {
                 const response = await fetch('/api/download_chart', {
@@ -1145,15 +1156,8 @@
                         </div>
                     `;
 
-                    // 显示真正的下载按钮
-                    previewActions.innerHTML = `
-                        <button onclick="downloadCurrentPreview()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded flex items-center gap-1 transition">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            保存图片
-                        </button>
-                    `;
+                    // 显示真正的下载按钮与 Stellarium 联动
+                    renderPreviewActions(true);
                 } else {
                     throw new Error(result.message);
                 }
@@ -1166,7 +1170,148 @@
                         <p>加载失败: ${err.message}</p>
                     </div>
                 `;
+                renderPreviewActions(false);
             }
+        }
+
+        // 渲染图像预览卡片操作按钮（Stellarium 星象次级按钮 + 保存图片主按钮）
+        function renderPreviewActions(hasImage = false) {
+            const previewActions = document.getElementById('previewActions');
+            if (!previewActions) return;
+
+            let html = `
+                <button type="button" onclick="openStellariumSimulation()" 
+                    class="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-300 hover:border-blue-300 text-xs font-medium rounded flex items-center gap-1.5 transition shadow-2xs cursor-pointer active:scale-95" 
+                    title="在新窗口打开 Stellarium 星象 (自动同步当前台站坐标、观测时间、视场与行星系)">
+                    <svg class="h-3.5 w-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        <path d="M2 12h20"></path>
+                    </svg>
+                    <span>Stellarium 星象</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                </button>
+            `;
+
+            if (hasImage) {
+                html += `
+                    <button type="button" onclick="downloadCurrentPreview()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded flex items-center gap-1 transition shadow-2xs cursor-pointer active:scale-95">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>保存图片</span>
+                    </button>
+                `;
+            }
+
+            previewActions.innerHTML = html;
+        }
+
+        // 解析对应母行星（Stellarium 3D 天象视图居中目标，使同系统内所有卫星同屏呈现）
+        function resolveStellariumPlanet(satCode, targetInfo) {
+            const code = String(satCode || '').trim();
+            const parentStr = String(targetInfo?.parent || '').toLowerCase();
+            const nameStr = String(targetInfo?.name || '').toLowerCase();
+
+            // 1. 根据自然卫星国际编号或母星代号判定行星系
+            if (code.startsWith('8')) return 'Neptune';      // 海王星系 (8001 Triton, 8002 Nereid, 8000 Neptune)
+            if (code.startsWith('7')) return 'Uranus';       // 天王星系 (7001 Ariel, 7002 Umbriel, 7003 Titania, 7004 Oberon, 7005 Miranda, 7000 Uranus)
+            if (code.startsWith('6')) return 'Saturn';       // 土星系 (6001~6009, 6000 Saturn)
+            if (code.startsWith('5') || code.startsWith('10')) return 'Jupiter'; // 木星系 (5001~5004, 10001~10004, 5000 Jupiter)
+            if (code.startsWith('4')) return 'Mars';         // 火星系 (4001 Phobos, 4002 Deimos)
+            if (code.startsWith('9')) return 'Pluto';        // 冥王星系 (9001 Charon)
+
+            // 2. 根据母星或天体元数据名称判定
+            if (parentStr.includes('uranus') || nameStr.includes('天王') || nameStr.includes('ariel') || nameStr.includes('titania') || nameStr.includes('umbriel') || nameStr.includes('oberon')) return 'Uranus';
+            if (parentStr.includes('saturn') || nameStr.includes('土星') || nameStr.includes('titan') || nameStr.includes('iapetus') || nameStr.includes('rhea') || nameStr.includes('dione')) return 'Saturn';
+            if (parentStr.includes('jupiter') || nameStr.includes('木星') || nameStr.includes('io') || nameStr.includes('europa') || nameStr.includes('ganymede') || nameStr.includes('callisto')) return 'Jupiter';
+            if (parentStr.includes('neptune') || nameStr.includes('海王') || nameStr.includes('triton') || nameStr.includes('nereid')) return 'Neptune';
+            if (parentStr.includes('mars') || nameStr.includes('火星')) return 'Mars';
+
+            // 3. 检查当前选中的预设单选按钮所在区域
+            const checkedRadio = document.querySelector('input[name="satellite"]:checked');
+            if (checkedRadio) {
+                const planetLabel = checkedRadio.closest('label[data-planet]');
+                const pAttr = planetLabel ? planetLabel.getAttribute('data-planet') : null;
+                if (pAttr === 'uranus') return 'Uranus';
+                if (pAttr === 'saturn') return 'Saturn';
+                if (pAttr === 'jupiter') return 'Jupiter';
+                if (pAttr === 'neptune') return 'Neptune';
+            }
+
+            return 'Uranus';
+        }
+
+        // 动态构建并打开 Stellarium Web 实景模拟链接（完全无缝适配任意台站、任意时刻与任意目标）
+        function openStellariumSimulation() {
+            // 1. 获取目标卫星代码与母行星
+            let satCode = '';
+            const customInput = document.getElementById('customSatellite')?.value?.trim();
+            const extraSel = document.getElementById('extraSatelliteSelect');
+            const checkedRadio = document.querySelector('input[name="satellite"]:checked');
+
+            if (customInput) {
+                satCode = customInput;
+            } else if (extraSel && extraSel.value && extraSel.value !== 'custom') {
+                satCode = extraSel.value;
+            } else if (checkedRadio) {
+                satCode = checkedRadio.value;
+            }
+
+            const planet = resolveStellariumPlanet(satCode || currentPreviewSatellite, currentTargetInfo);
+
+            // 2. 获取当前测站坐标（支持 286 昆明 1m, O07 丽江 2.4m, 327 兴隆, 500 地心, 以及全球 1400+ MPC 测站）
+            let lat = 25.0294;
+            let lon = 102.7883;
+            let alt = 2000.0;
+
+            if (currentStation && typeof currentStation.lat === 'number') {
+                lat = currentStation.lat;
+                lon = currentStation.lon;
+                alt = currentStation.alt || 0.0;
+            } else {
+                const obsVal = (document.getElementById('observatory')?.value || '286').trim().toUpperCase();
+                if (obsVal === 'O07') {
+                    lat = 26.6950; lon = 100.0300; alt = 3200.0;
+                } else if (obsVal === '327') {
+                    lat = 40.3964; lon = 117.5750; alt = 960.0;
+                } else if (obsVal === '500') {
+                    lat = 0.0; lon = 0.0; alt = 0.0;
+                }
+            }
+
+            // 3. 获取观测时间（以当前预览条目精确 UTC 时间优先，严格转为 ISO 8601 UTC 字符串）
+            let dateIso = '';
+            if (currentPreviewItem && currentPreviewItem.time) {
+                // currentPreviewItem.time 为 "YYYY-MM-DD HH:mm:ss" UTC 格式
+                dateIso = currentPreviewItem.time.replace(' ', 'T') + 'Z';
+            } else {
+                const localInput = document.getElementById('localTimeInput')?.value?.trim();
+                const parsed = parseLocalObservationTime(localInput);
+                if (parsed && !parsed.error && parsed.utcDate) {
+                    dateIso = parsed.utcDate.toISOString().replace(/\.\d{3}/, '');
+                } else {
+                    dateIso = new Date().toISOString().replace(/\.\d{3}/, '');
+                }
+            }
+
+            // 4. 视场 FOV 换算（望远镜角分 arcmin 换算为 Stellarium Web 接受的度数 deg，默认 10' 换算为 0.1667°）
+            const fovArcmin = parseFloat(document.getElementById('fov')?.value || 10) || 10;
+            const fovDeg = (fovArcmin / 60.0).toFixed(4);
+
+            // 5. 拼装标准化参数并一键直达
+            const params = new URLSearchParams({
+                fov: fovDeg,
+                date: dateIso,
+                lat: lat.toFixed(4),
+                lng: lon.toFixed(4),
+                elev: Math.round(alt).toString()
+            });
+
+            const targetUrl = `https://stellarium-web.org/skysource/${encodeURIComponent(planet)}?${params.toString()}`;
+            window.open(targetUrl, '_blank', 'noopener,noreferrer');
         }
 
         // 下载当前预览的图片
