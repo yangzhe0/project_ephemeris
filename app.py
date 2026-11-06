@@ -431,8 +431,15 @@ def parse_ephemeris(pre_content: str, observatory: str = "286", satellite: str =
     return results
 
 
+_EPHEM_CACHE: dict[str, dict[str, Any]] = {}
+_EPHEM_CACHE_LOCK = threading.Lock()
+
 def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, timestep):
     observatory = normalize_obs_code(observatory)
+    cache_key = f"{plnvar}_{satellite}_{nde}_{observatory}_{initmom}_{ntimes}_{timestep}"
+    with _EPHEM_CACHE_LOCK:
+        if cache_key in _EPHEM_CACHE:
+            return _EPHEM_CACHE[cache_key]
     payload = {
         "langue": "30", "plnvar": plnvar, "satellite": satellite,
         "relative": "-1", "nde": nde, "observatory": observatory,
@@ -505,12 +512,17 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
     })
     station = get_observatory(observatory)
 
-    return {
+    res = {
         "success": True,
         "data": results,
         "target_info": target_info,
         "station": station
     }
+    with _EPHEM_CACHE_LOCK:
+        if len(_EPHEM_CACHE) > 256:
+            _EPHEM_CACHE.pop(next(iter(_EPHEM_CACHE)))
+        _EPHEM_CACHE[cache_key] = res
+    return res
 
 
 def _safe_download_name(value: str) -> str:
@@ -834,6 +846,15 @@ def observation_status():
                     pass
     return jsonify(compute_dynamic_windows(bjt_dt, obs))
 
+
+def _prewarm_background():
+    try:
+        compute_dynamic_windows(obs_code="286")
+    except Exception:
+        pass
+
+if HAS_ASTROPY:
+    threading.Thread(target=_prewarm_background, daemon=True).start()
 
 if __name__ == "__main__":
     debug = os.environ.get("FLASK_DEBUG", "").lower() in {"1", "true", "yes"}

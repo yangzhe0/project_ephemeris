@@ -8,7 +8,7 @@
     <title>天文卫星星历与寻星图工具</title>
     <link rel="icon" href="/favicon.png" type="image/jpeg">
     <link rel="shortcut icon" href="/favicon.ico">
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/tailwind.min.js" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com';"></script>
     <style>
         /* 自定义加载动画 */
         .loader {
@@ -741,10 +741,12 @@
 
         // 页面初始化：按导师要求先查当前天体出证认图，后台异步拉取其他天体的高度角与倒计时，互不拉垮时间
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. 优先立即提交当前选中星（海卫一），快速出星历表和证认图
-            submitCalculation();
-            // 2. 后台异步拉取所有天体的实时高度角与暗夜窗口
+            // 1. 优先异步拉取所有天体的实时高度角与暗夜窗口（毫秒级点亮顶栏与磁贴徽标）
             updateObservationProgress(false);
+            // 2. 紧随其后提交默认目标星历与证认图
+            setTimeout(() => {
+                submitCalculation();
+            }, 50);
             // 3. 之后每分钟自动静默刷新一次
             setInterval(() => updateObservationProgress(false), 60000);
         });

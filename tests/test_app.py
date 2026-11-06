@@ -52,6 +52,13 @@ class EphemerisTests(unittest.TestCase):
         self.assertIn(b"resolveStellariumPlanet", index.data)
         self.assertIn(b"renderPreviewActions", index.data)
 
+    def test_static_tailwind_and_ephemeris_cache(self):
+        res = self.client.get("/static/tailwind.min.js")
+        self.assertEqual(res.status_code, 200)
+        self.assertGreater(len(res.data), 100000)
+        self.assertTrue(hasattr(ephemeris, "_EPHEM_CACHE"))
+        res.close()
+
     def test_preset_satellites_cover_tonight_outline(self):
         """Ensure all required satellites from observation outline are present."""
         codes = {s["code"] for s in ephemeris.SATELLITES}
