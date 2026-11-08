@@ -610,6 +610,14 @@ def robots():
     return "User-agent: *\nDisallow:", 200, {"Content-Type": "text/plain"}
 
 
+@app.route("/183293e25fb09491d785c7f9306c983e.txt")
+def wechat_admin_verify():
+    txt_path = Path(app.root_path) / "183293e25fb09491d785c7f9306c983e.txt"
+    if txt_path.is_file():
+        return send_file(txt_path, mimetype="text/plain")
+    return "99572ad1576f707ed99a3861360e14e713026d2b", 200, {"Content-Type": "text/plain"}
+
+
 @app.route("/favicon.ico")
 @app.route("/favicon.png")
 def favicon():

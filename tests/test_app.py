@@ -59,6 +59,13 @@ class EphemerisTests(unittest.TestCase):
         self.assertTrue(hasattr(ephemeris, "_EPHEM_CACHE"))
         res.close()
 
+    def test_wechat_admin_verify(self):
+        res = self.client.get("/183293e25fb09491d785c7f9306c983e.txt")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b"99572ad1576f707ed99a3861360e14e713026d2b", res.data)
+        self.assertEqual(res.mimetype, "text/plain")
+        res.close()
+
     def test_preset_satellites_cover_tonight_outline(self):
         """Ensure all required satellites from observation outline are present."""
         codes = {s["code"] for s in ephemeris.SATELLITES}
