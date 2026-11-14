@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>天文卫星星历与寻星图工具</title>
+    <title data-en-text="Satellite Ephemeris &amp; Finder Charts">天文卫星星历与寻星图工具</title>
     <link rel="icon" href="/favicon.png" type="image/jpeg">
     <link rel="shortcut icon" href="/favicon.ico">
     <script src="/static/tailwind.min.js" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com';"></script>
@@ -112,10 +112,10 @@
 
     <!-- 顶部导航栏 -->
     <header class="bg-white shadow-2xs border-b border-gray-200 z-10">
-        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-0 sm:h-16 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1">
             <!-- 品牌标识与标题（响应式优化，手机端不折行、字号适度） -->
-            <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-shrink">
-                <div class="bg-blue-600 text-white p-1.5 sm:p-2 rounded-lg flex-shrink-0 shadow-2xs" title="天文望远镜星历与寻星系统">
+            <div class="order-1 flex items-center gap-2 sm:gap-3 min-w-0">
+                <div class="bg-blue-600 text-white p-1.5 sm:p-2 rounded-lg flex-shrink-0 shadow-2xs" title="天文望远镜星历与寻星系统" data-en-title="Satellite Ephemeris &amp; Finder Charts">
                     <!-- 方案 3: 光学天文望远镜仰望星空 SVG -->
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 w-6" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -130,8 +130,8 @@
                 </div>
                 <div class="min-w-0">
                     <h1 class="text-[15px] sm:text-base md:text-lg lg:text-xl font-bold text-gray-800 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
-                        <span class="sm:hidden">卫星星历与寻星图</span>
-                        <span class="hidden sm:inline">天文卫星星历与寻星图工具</span>
+                        <span class="sm:hidden" data-en-text="Sat. Ephemeris">卫星星历与寻星图</span>
+                        <span class="hidden sm:inline" data-en-text="Satellite Ephemeris &amp; Finder Charts">天文卫星星历与寻星图工具</span>
                     </h1>
                     <p class="text-[10px] sm:text-xs text-gray-400 sm:text-gray-500 leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
                         SAI MSU · STScI DSS
@@ -139,27 +139,34 @@
                 </div>
             </div>
 
-            <!-- 右侧快捷功能区（时钟、暗色、指南，手机端紧凑化） -->
-            <div class="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
-                <div class="flex text-[11px] sm:text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg font-medium items-center gap-1 sm:gap-1.5 flex-shrink max-w-[170px] sm:max-w-none" title="当前所选测站暗夜可测时间窗口">
-                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 animate-pulse"></span>
-                    <span id="nightBadge" class="truncate font-mono">[286] 暗夜 19:45 ~ 06:00</span>
-                </div>
-                <div class="text-[11px] sm:text-xs bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-gray-600 font-mono flex items-center gap-1.5" title="当前实时 UTC 时间">
+            <div class="order-3 col-span-2 sm:order-2 sm:col-span-1 w-fit max-w-full flex items-center gap-1 sm:gap-1.5 text-[11px] sm:text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg font-medium"
+                title="当前所选测站暗夜可测时间窗口" data-en-title="Nighttime observing window at the selected station">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 animate-pulse"></span>
+                <span id="nightBadge" class="truncate font-mono" data-en-text="[286] Loading night window…">[286] 暗夜数据计算中...</span>
+            </div>
+
+            <div class="order-2 sm:order-3 flex items-center gap-1.5 sm:gap-2.5">
+                <div class="text-[11px] sm:text-xs bg-gray-100 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-gray-600 font-mono flex items-center gap-1.5" title="当前实时 UTC 时间" data-en-title="Current UTC time">
                     <span class="w-1.5 h-1.5 sm:w-2 sm:h-2 inline-block bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
                     <span class="hidden sm:inline text-gray-400">UTC:</span>
                     <span id="utcClock" class="font-bold">--:--:--</span>
                 </div>
                 <button onclick="toggleModal('guideModal')"
                     class="flex items-center gap-1 p-1.5 sm:px-3 sm:py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs sm:text-sm font-medium rounded-md sm:rounded-lg transition"
-                    title="查看使用指南">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24"
+                    title="查看使用指南" data-en-title="Open user guide"
+                    aria-label="查看使用指南" data-en-aria-label="Open user guide">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="hidden sm:block h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span class="hidden sm:inline">使用指南</span>
-                    <span class="sm:hidden text-xs">指南</span>
+                    <span class="hidden sm:inline" data-en-text="User Guide">使用指南</span>
+                    <span class="sm:hidden text-xs" data-en-text="Guide">指南</span>
+                </button>
+                <button type="button" id="languageToggle" onclick="toggleLanguage()"
+                    class="shrink-0 whitespace-nowrap bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs sm:text-sm font-medium px-2 py-1.5 rounded-md sm:rounded-lg transition"
+                    aria-label="Switch to English" data-en-aria-label="切换到中文">
+                    <span lang="en">English</span>
                 </button>
             </div>
         </div>
@@ -181,10 +188,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        目标与控制
+                        <span data-en-text="Target and settings">目标与控制</span>
                     </h2>
                     <span class="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 点选即自动更新
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> <span data-en-text="Auto-update">点选即自动更新</span>
                     </span>
                 </div>
 
@@ -204,8 +211,8 @@
                         <!-- 目标天体（完全铺平展开，底色动态进度条显示剩余可观测时间） -->
                         <div>
                             <div class="flex justify-between items-center mb-1.5">
-                                <label class="block text-xs font-semibold text-gray-700">目标天体 (点击直接切换计算)</label>
-                                <span class="text-[10px] text-gray-400">底色显示剩余可观测时长</span>
+                                <label class="block text-xs font-semibold text-gray-700" data-en-text="Target">目标天体 (点击直接切换计算)</label>
+                                <span class="text-[10px] text-gray-400" data-en-text="Color shows time left">底色显示剩余可观测时长</span>
                             </div>
                             
                             <!-- 10个目标平铺，无内部滚动条 -->
@@ -213,7 +220,7 @@
                                 {% for sat in satellites %}
                                 <label class="relative flex items-center px-2 py-2 rounded-lg border border-gray-200 bg-white cursor-pointer overflow-hidden transition select-none hover:border-blue-400 group"
                                        data-sat-code="{{ sat.code }}" data-planet="{{ sat.planet }}" id="sat-label-{{ sat.code }}"
-                                       title="点击直接选中并自动更新">
+                                       title="点击直接选中并自动更新" data-en-title="Select and calculate">
                                     <input type="radio" name="satellite" value="{{ sat.code }}" data-name="{{ sat.name.split(' ')[0] }}" class="peer sr-only"
                                         onchange="onSelectSatellite('{{ sat.code }}')" {% if sat.code==default_satellite %}checked{% endif %}>
                                     
@@ -248,118 +255,118 @@
                             <div class="pt-1.5 space-y-1.5">
                                 <select id="extraSatelliteSelect" onchange="onExtraSatelliteChange()"
                                     class="w-full border border-gray-300 rounded-lg p-2 text-xs text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition cursor-pointer shadow-2xs">
-                                    <option value="" selected>或选择更多天然卫星备选 (常用)...</option>
-                                    <optgroup label="木星天然卫星 (伽利略大卫星)">
-                                        <option value="5001">5001 - J1 木卫一 (Io / 艾奥)</option>
-                                        <option value="5002">5002 - J2 木卫二 (Europa / 欧罗巴)</option>
-                                        <option value="5003">5003 - J3 木卫三 (Ganymede / 盖尼米德)</option>
-                                        <option value="5004">5004 - J4 木卫四 (Callisto / 卡利斯托)</option>
+                                    <option value="" selected data-en-text="More satellites and planet centers…">或选择更多天然卫星备选 (常用)...</option>
+                                    <optgroup label="木星天然卫星 (伽利略大卫星)" data-en-label="Jupiter (Galilean moons)">
+                                        <option value="5001" data-en-text="5001 - J1 Io">5001 - J1 木卫一 (Io / 艾奥)</option>
+                                        <option value="5002" data-en-text="5002 - J2 Europa">5002 - J2 木卫二 (Europa / 欧罗巴)</option>
+                                        <option value="5003" data-en-text="5003 - J3 Ganymede">5003 - J3 木卫三 (Ganymede / 盖尼米德)</option>
+                                        <option value="5004" data-en-text="5004 - J4 Callisto">5004 - J4 木卫四 (Callisto / 卡利斯托)</option>
                                     </optgroup>
-                                    <optgroup label="土星天然卫星备选">
-                                        <option value="6002">6002 - S2 土卫二 (Enceladus)</option>
-                                        <option value="6003">6003 - S3 土卫三 (Tethys)</option>
-                                        <option value="6004">6004 - S4 土卫四 (Dione)</option>
-                                        <option value="6005">6005 - S5 土卫五 (Rhea)</option>
-                                        <option value="6006">6006 - S6 土卫六 (Titan / 泰坦)</option>
-                                        <option value="6007">6007 - S7 土卫七 (Hyperion)</option>
+                                    <optgroup label="土星天然卫星备选" data-en-label="Saturn moons">
+                                        <option value="6002" data-en-text="6002 - S2 Enceladus">6002 - S2 土卫二 (Enceladus)</option>
+                                        <option value="6003" data-en-text="6003 - S3 Tethys">6003 - S3 土卫三 (Tethys)</option>
+                                        <option value="6004" data-en-text="6004 - S4 Dione">6004 - S4 土卫四 (Dione)</option>
+                                        <option value="6005" data-en-text="6005 - S5 Rhea">6005 - S5 土卫五 (Rhea)</option>
+                                        <option value="6006" data-en-text="6006 - S6 Titan">6006 - S6 土卫六 (Titan / 泰坦)</option>
+                                        <option value="6007" data-en-text="6007 - S7 Hyperion">6007 - S7 土卫七 (Hyperion)</option>
                                     </optgroup>
-                                    <optgroup label="天王星天然卫星备选">
-                                        <option value="7002">7002 - U2 天卫二 (Umbriel)</option>
-                                        <option value="7003">7003 - U3 天卫三 (Titania)</option>
-                                        <option value="7004">7004 - U4 天卫四 (Oberon)</option>
-                                        <option value="7005">7005 - U5 天卫五 (Miranda)</option>
+                                    <optgroup label="天王星天然卫星备选" data-en-label="Uranus moons">
+                                        <option value="7002" data-en-text="7002 - U2 Umbriel">7002 - U2 天卫二 (Umbriel)</option>
+                                        <option value="7003" data-en-text="7003 - U3 Titania">7003 - U3 天卫三 (Titania)</option>
+                                        <option value="7004" data-en-text="7004 - U4 Oberon">7004 - U4 天卫四 (Oberon)</option>
+                                        <option value="7005" data-en-text="7005 - U5 Miranda">7005 - U5 天卫五 (Miranda)</option>
                                     </optgroup>
-                                    <optgroup label="行星本体中心">
-                                        <option value="8000">8000 - 海王星本体中心 (Neptune Center)</option>
-                                        <option value="6000">6000 - 土星本体中心 (Saturn Center)</option>
-                                        <option value="7000">7000 - 天王星本体中心 (Uranus Center)</option>
-                                        <option value="5000">5000 - 木星本体中心 (Jupiter Center)</option>
+                                    <optgroup label="行星本体中心" data-en-label="Planet centers">
+                                        <option value="8000" data-en-text="8000 - Neptune Center">8000 - 海王星本体中心 (Neptune Center)</option>
+                                        <option value="6000" data-en-text="6000 - Saturn Center">6000 - 土星本体中心 (Saturn Center)</option>
+                                        <option value="7000" data-en-text="7000 - Uranus Center">7000 - 天王星本体中心 (Uranus Center)</option>
+                                        <option value="5000" data-en-text="5000 - Jupiter Center">5000 - 木星本体中心 (Jupiter Center)</option>
                                     </optgroup>
-                                    <option value="custom">✏️ 自己手动输入编号...</option>
+                                    <option value="custom" data-en-text="✏️ Enter a satellite code…">✏️ 自己手动输入编号...</option>
                                 </select>
 
                                 <!-- 自定义输入框（默认折叠隐藏，选择“自己手动输入”时展开） -->
                                 <div id="customSatInputWrapper" class="hidden">
                                     <div class="flex gap-1.5">
-                                        <input type="text" id="customSatellite" placeholder="输入 4~5 位自然卫星数字代码 (如 5001, 8001)"
+                                        <input type="text" id="customSatellite" placeholder="输入 4~5 位自然卫星数字代码 (如 5001, 8001)" data-en-placeholder="4–5 digit code, e.g. 5001"
                                             onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();}"
-                                            class="flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs font-mono bg-blue-50/20 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                            class="min-w-0 flex-1 border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs font-mono bg-blue-50/20 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                         <button type="button" onclick="submitCalculation()"
-                                            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs">
+                                            class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs" data-en-text="Calculate">
                                             计算
                                         </button>
                                     </div>
-                                    <p class="text-[10px] text-gray-400 mt-0.5">按回车或点击“计算”直接查询</p>
+                                    <p class="text-[10px] text-gray-400 mt-0.5" data-en-text="Press Enter or click Calculate">按回车或点击“计算”直接查询</p>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 观测时间 (北京时间 +8) -->
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">观测时间 (北京时间 +8)</label>
-                            <input type="text" id="localTimeInput" placeholder="留空默认当前时刻，或输入如 20261105213000"
+                            <label class="block text-xs font-medium text-gray-700 mb-1" data-en-text="Observation time (Beijing, UTC+8)">观测时间 (北京时间 +8)</label>
+                            <input type="text" id="localTimeInput" placeholder="留空默认当前时刻，或输入如 20261105213000" data-en-placeholder="Leave blank for current time, or enter 20261105213000"
                                 onchange="onLocalTimeChange()"
-                                onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();updateObservationProgress(false);}"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();updateObservationProgress();}"
                                 class="w-full border border-gray-300 rounded-lg p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none">
                             <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
                                 </svg>
-                                留空为当前时刻；支持 20261105213000 无空格连续时间直接输入
+                                <span data-en-text="Leave blank for the current time. Compact input such as 20261105213000 is accepted.">留空为当前时刻；支持 20261105213000 无空格连续时间直接输入</span>
                             </p>
                         </div>
 
                         <!-- 观测站 -->
                         <div>
                             <div class="flex justify-between items-center mb-1">
-                                <label for="observatorySelect" class="block text-xs font-semibold text-gray-700">观测台站 (Observatory)</label>
-                                <span id="currentStationBadge" class="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">286 云南台</span>
+                                <label for="observatorySelect" class="block text-xs font-semibold text-gray-700" data-en-text="Observatory">观测台站 (Observatory)</label>
+                                <span id="currentStationBadge" class="max-w-[55%] truncate text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200" data-en-text="286 Kunming">286 云南台</span>
                             </div>
 
                             <!-- 原生触控下拉菜单（桌面/手机双端完美兼容，一键即换即算） -->
                             <select id="observatorySelect" onchange="onObservatorySelectChange()"
                                 class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-xs sm:text-sm font-medium text-gray-800 cursor-pointer shadow-2xs">
-                                <optgroup label="国内主要天文台站">
-                                    <option value="286" selected>[286] 云南天文台昆明 1m望远镜 (云南昆明)</option>
-                                    <option value="O07">[O07] 丽江高美古 2.4m望远镜 (云南丽江)</option>
-                                    <option value="327">[327] 国家天文台兴隆基地 2.16m (河北兴隆)</option>
-                                    <option value="330">[330] 紫金山天文台 (江苏南京)</option>
-                                    <option value="D29">[D29] 紫金山天文台盱眙观测站 (江苏盱眙)</option>
-                                    <option value="337">[337] 佘山天文台 1.56m望远镜 (上海佘山)</option>
-                                    <option value="C42">[C42] 新疆天文台南山观测站 (新疆南山)</option>
-                                    <option value="D39">[D39] 山东大学威海天文台 1m (山东威海)</option>
+                                <optgroup label="国内主要天文台站" data-en-label="Observatories in China">
+                                    <option value="286" selected data-en-text="[286] Yunnan Observatories, Kunming 1 m">[286] 云南天文台昆明 1m望远镜 (云南昆明)</option>
+                                    <option value="O07" data-en-text="[O07] Lijiang Gaomeigu 2.4 m">[O07] 丽江高美古 2.4m望远镜 (云南丽江)</option>
+                                    <option value="327" data-en-text="[327] NAOC Xinglong 2.16 m">[327] 国家天文台兴隆基地 2.16m (河北兴隆)</option>
+                                    <option value="330" data-en-text="[330] Purple Mountain Observatory, Nanjing">[330] 紫金山天文台 (江苏南京)</option>
+                                    <option value="D29" data-en-text="[D29] Purple Mountain Observatory, Xuyi">[D29] 紫金山天文台盱眙观测站 (江苏盱眙)</option>
+                                    <option value="337" data-en-text="[337] Sheshan Observatory 1.56 m">[337] 佘山天文台 1.56m望远镜 (上海佘山)</option>
+                                    <option value="C42" data-en-text="[C42] Xinjiang Astronomical Observatory, Nanshan">[C42] 新疆天文台南山观测站 (新疆南山)</option>
+                                    <option value="D39" data-en-text="[D39] Shandong University, Weihai 1 m">[D39] 山东大学威海天文台 1m (山东威海)</option>
                                 </optgroup>
-                                <optgroup label="地心与国际经典台站">
-                                    <option value="500">[500] 地心坐标 (Geocentric / 全天无地平)</option>
-                                    <option value="000">[000] 皇家格林尼治天文台 (Greenwich)</option>
-                                    <option value="568">[568] 夏威夷莫纳克亚山 (Mauna Kea)</option>
-                                    <option value="809">[809] 欧洲南方天文台拉西拉 (La Silla)</option>
-                                    <option value="309">[309] 帕洛马山天文台 (Palomar Mountain)</option>
-                                    <option value="675">[675] 智利托洛洛山美洲际天文台 (CTIO)</option>
+                                <optgroup label="地心与国际经典台站" data-en-label="Geocentric and international sites">
+                                    <option value="500" data-en-text="[500] Geocentric (no local horizon)">[500] 地心坐标 (Geocentric / 全天无地平)</option>
+                                    <option value="000" data-en-text="[000] Royal Observatory, Greenwich">[000] 皇家格林尼治天文台 (Greenwich)</option>
+                                    <option value="568" data-en-text="[568] Mauna Kea">[568] 夏威夷莫纳克亚山 (Mauna Kea)</option>
+                                    <option value="809" data-en-text="[809] ESO La Silla Observatory">[809] 欧洲南方天文台拉西拉 (La Silla)</option>
+                                    <option value="309" data-en-text="[309] Palomar Observatory">[309] 帕洛马山天文台 (Palomar Mountain)</option>
+                                    <option value="675" data-en-text="[675] Cerro Tololo Inter-American Observatory">[675] 智利托洛洛山美洲际天文台 (CTIO)</option>
                                 </optgroup>
-                                <option value="custom">✏️ 手动输入其他台站代码 (支持全球 1400+ MPC 测站)...</option>
+                                <option value="custom" data-en-text="✏️ Enter a station code (1,400+ MPC sites)…">✏️ 手动输入其他台站代码 (支持全球 1400+ MPC 测站)...</option>
                             </select>
 
                             <!-- 自定义测站输入框（选中“手动输入”时显示） -->
                             <div id="customObsWrapper" class="hidden mt-2">
                                 <div class="flex gap-2">
-                                    <input type="text" id="customObsInput" placeholder="输入 3 位 IAU/MPC 测站代码 (如 010, 046, 290 等)"
+                                    <input type="text" id="customObsInput" placeholder="输入 3 位 IAU/MPC 测站代码 (如 010, 046, 290 等)" data-en-placeholder="Enter a 3-character IAU/MPC code, e.g. 010"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();applyCustomObservatory();}"
-                                        class="flex-1 border border-blue-300 rounded-lg p-2 text-xs font-mono uppercase bg-blue-50/30 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                        class="min-w-0 flex-1 border border-blue-300 rounded-lg p-2 text-xs font-mono uppercase bg-blue-50/30 focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                     <button type="button" onclick="applyCustomObservatory()"
-                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs">
+                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs" data-en-text="Apply">
                                         应用
                                     </button>
                                 </div>
-                                <p class="text-[10px] text-gray-400 mt-1">支持全球 1400+ MPC 台站，按回车或点击应用即可</p>
+                                <p class="text-[10px] text-gray-400 mt-1" data-en-text="Supports 1,400+ MPC sites. Press Enter or click Apply.">支持全球 1400+ MPC 台站，按回车或点击应用即可</p>
                             </div>
 
                             <!-- 存储当前实际测站代码 -->
                             <input type="hidden" id="observatory" value="286">
 
                             <p class="text-[10px] text-gray-400 mt-1 flex items-center justify-between">
-                                <span>切换台站即自动更新当夜暗夜时刻与高度角</span>
-                                <span class="text-emerald-600 font-medium">即选即算</span>
+                                <span data-en-text="Changing station updates darkness and altitude">切换台站即自动更新当夜暗夜时刻与高度角</span>
+                                <span class="text-emerald-600 font-medium" data-en-text="Auto-update">即选即算</span>
                             </p>
                         </div>
 
@@ -367,7 +374,7 @@
                         <details class="group border border-gray-200 rounded-lg overflow-hidden">
                             <summary
                                 class="flex items-center justify-between cursor-pointer p-3 bg-gray-50 text-gray-600 text-sm hover:bg-gray-100 transition select-none">
-                                <span>高级参数设置 (视场 / 历表 / 步长)</span>
+                                <span data-en-text="Advanced (field of view, ephemeris, time step)">高级参数设置 (视场 / 历表 / 步长)</span>
                                 <svg class="w-4 h-4 group-open:rotate-180 transition-transform" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -376,7 +383,7 @@
                             </summary>
                             <div class="p-3 bg-white grid grid-cols-2 gap-2">
                                 <div>
-                                    <label class="text-xs text-gray-500 mb-1 block">历表类型</label>
+                                    <label class="text-xs text-gray-500 mb-1 block" data-en-text="Ephemeris model">历表类型</label>
                                     <select id="nde"
                                         class="w-full text-xs border border-gray-300 rounded p-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
                                         <option value="6" selected>DE441 (Default)</option>
@@ -393,17 +400,17 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="text-xs text-purple-600 font-bold mb-1 block">视场 FOV (角分)</label>
+                                    <label class="text-xs text-purple-600 font-bold mb-1 block" data-en-text="FOV (arcmin)">视场 FOV (角分)</label>
                                     <input type="number" id="fov" value="10" min="1" max="60"
                                         class="w-full text-xs border border-purple-200 bg-purple-50 text-purple-700 font-bold rounded p-1.5 text-center focus:ring-2 focus:ring-purple-500 focus:outline-none">
                                 </div>
                                 <div>
-                                    <label class="text-xs text-gray-500 mb-1 block">步数</label>
+                                    <label class="text-xs text-gray-500 mb-1 block" data-en-text="Number of steps">步数</label>
                                     <input type="number" id="ntimes" value="1" min="1" max="100" step="1"
                                         class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
                                 </div>
                                 <div>
-                                    <label class="text-xs text-gray-500 mb-1 block">步长 (Hours)</label>
+                                    <label class="text-xs text-gray-500 mb-1 block" data-en-text="Step size (hours)">步长 (Hours)</label>
                                     <input type="number" id="timestep" value="1" min="0.001" max="8760" step="any"
                                         class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
                                 </div>
@@ -439,8 +446,8 @@
                             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                 </div>
-                <h3 class="text-lg font-medium text-gray-600 mb-1">等待计算</h3>
-                <p class="text-sm">请在左侧设置参数并点击“开始计算”</p>
+                <h3 class="text-lg font-medium text-gray-600 mb-1" data-en-text="Ready to calculate">等待计算</h3>
+                <p class="text-sm" data-en-text="Choose your settings and click Calculate.">请在左侧设置参数并点击“开始计算”</p>
             </div>
 
             <!-- 结果显示区域 -->
@@ -457,7 +464,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            计算结果与高度角
+                            <span data-en-text="Ephemeris results">计算结果与高度角</span>
                         </h2>
                         <div id="targetSummaryHeader" class="text-xs text-gray-500 font-mono hidden sm:block"></div>
                     </div>
@@ -476,9 +483,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            图像预览
+                            <span data-en-text="Finder chart">图像预览</span>
                         </h2>
-                        <div class="flex gap-2" id="previewActions">
+                        <div class="flex flex-wrap justify-end gap-2" id="previewActions">
                             <!-- 动态插入下载按钮 -->
                         </div>
                     </div>
@@ -486,12 +493,12 @@
                         id="previewContent">
                         <!-- 天文方位指引 (J2000 ICRF: 北在上，东在左) -->
                         <div class="absolute top-3 left-3 z-30 pointer-events-none bg-black/60 backdrop-blur-xs text-white/90 text-[11px] font-mono px-2 py-1 rounded border border-white/20 flex items-center gap-2">
-                            <span>↑ N (北)</span>
-                            <span>← E (东)</span>
+                            <span data-en-text="↑ North">↑ N (北)</span>
+                            <span data-en-text="← East">← E (东)</span>
                             <span class="text-white/40">|</span>
                             <span id="chartFovIndicator">FOV: 10' × 10'</span>
                         </div>
-                        <p class="text-gray-500 text-sm">点击目标自动生成寻星图</p>
+                        <p class="text-gray-500 text-sm" data-en-text="Select a target to generate a finder chart.">点击目标自动生成寻星图</p>
                     </div>
                 </div>
 
@@ -499,6 +506,7 @@
         </div>
     </main>
 
+    <script src="{{ url_for('static', filename='language.js') }}"></script>
     <script>
 
         // 解析观测时间：支持 20261105213000 无空格连续纯数字，以及标准带空格/横杠格式
@@ -541,14 +549,20 @@
                     m = parts.length > 4 ? parseInt(parts[4]) : 0;
                     sec = parts.length > 5 ? parseInt(parts[5]) : 0;
                 } else {
-                    return { error: '时间格式无效，请输入如 20261105213000 或 2026 11 05 21 30 00' };
+                    return { error: translate(
+                        '时间格式无效，请输入如 20261105213000 或 2026 11 05 21 30 00',
+                        'Invalid time format. Try 20261105213000 or 2026 11 05 21 30 00.'
+                    ) };
                 }
             }
 
             const testDate = new Date(Date.UTC(Y, M, D, h, m, sec));
             if (testDate.getUTCFullYear() !== Y || testDate.getUTCMonth() !== M || testDate.getUTCDate() !== D ||
                 testDate.getUTCHours() !== h || testDate.getUTCMinutes() !== m || testDate.getUTCSeconds() !== sec) {
-                return { error: '时间数值越界，请检查月份(1-12)、日期及小时(0-23)' };
+                return { error: translate(
+                    '时间数值越界，请检查月份(1-12)、日期及小时(0-23)',
+                    'Invalid date or time. Check the month, day, and time values.'
+                ) };
             }
 
             const utcDate = new Date(Date.UTC(Y, M, D, h - 8, m, sec));
@@ -560,11 +574,11 @@
         }
 
         function onLocalTimeChange() {
-            updateObservationProgress(false);
+            updateObservationProgress();
         }
 
         // --- 观测时间窗口与实时高度角刷新 (纯后台异步拉取，绝不阻塞当前星出图) ---
-        async function updateObservationProgress(isInitial = false) {
+        async function updateObservationProgress() {
             const obs = document.getElementById('observatory').value || '286';
             const localInput = document.getElementById('localTimeInput').value.trim();
 
@@ -586,89 +600,117 @@
                     currentStation = data.station;
                 }
 
-                // 1. 更新顶部当夜状态指示徽标与测站徽标（按台站编号显示）
-                const nightBadge = document.getElementById('nightBadge');
-                if (nightBadge && data.station) {
-                    const stCode = data.station.code || obs;
-                    const rawName = (data.station.name || '').split(' ')[0];
-                    const shortName = rawName.replace(/天文台|观测站|望远镜/g, '');
-                    const namePart = shortName ? ` ${shortName}` : '';
-
-                    if (stCode === '500') {
-                        nightBadge.innerText = `[500] 全天无地平`;
-                        nightBadge.parentElement.title = `地心坐标 (500) · 全天无地平限制`;
-                    } else if (data.twilight && data.twilight.dusk && data.twilight.dusk !== '--:--') {
-                        const tw = data.twilight;
-                        const sunrisePart = (tw.sunrise && tw.sunrise !== '--:--') ? ` (日出 ${tw.sunrise})` : '';
-                        nightBadge.innerText = `[${stCode}${namePart}] 暗夜 ${tw.dusk} ~ ${tw.dawn}${sunrisePart}`;
-                        const lagText = tw.solar_offset_min ? ` · 平太阳时时差 ${tw.solar_offset_min > 0 ? '+' : ''}${tw.solar_offset_min}分` : '';
-                        nightBadge.parentElement.title = `测站 [${stCode}] ${data.station.name || ''}${lagText} · ${data.night_date} 观测窗口: 适测暗夜 ${tw.dusk} ~ ${tw.dawn} (深空纯暗夜 ${tw.dusk_astro || tw.dusk} ~ ${tw.dawn_astro || tw.dawn}，当地日出 ${tw.sunrise || '--:--'})`;
-                    } else {
-                        nightBadge.innerText = `[${stCode}${namePart}] 暗夜数据计算中...`;
-                    }
-                }
-                const stBadge = document.getElementById('currentStationBadge');
-                if (stBadge && data.station) {
-                    const stCode = data.station.code || obs;
-                    const shortName = (data.station.name || '').split(' ')[0];
-                    stBadge.innerText = `${stCode} ${shortName}`;
-                }
-
-                // 2. 动态更新每个天体按钮的实时高度角、底色进度条和时间徽标（表格化分列渲染，统一中等字重）
-                const labels = document.querySelectorAll('#satelliteButtonsContainer label[data-planet]');
-                labels.forEach(label => {
-                    const planet = label.getAttribute('data-planet');
-                    const pInfo = data.planets ? data.planets[planet] : null;
-                    const pBar = label.querySelector('.obs-progress-bar');
-                    const altBadge = label.querySelector('.sat-alt-badge');
-                    const timeBadge = label.querySelector('.sat-time-badge');
-                    if (!pInfo || !pBar) return;
-
-                    label.title = pInfo.tooltip || '';
-
-                    // 列 2: 实时高度角（等宽区域对齐）
-                    if (altBadge) {
-                        altBadge.innerText = pInfo.alt_str || '--';
-                        if (pInfo.alt_deg !== null && pInfo.alt_deg !== undefined) {
-                            if (pInfo.alt_deg >= 30) {
-                                altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-emerald-800 shrink-0 select-none';
-                            } else if (pInfo.alt_deg > 0) {
-                                altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-amber-800 shrink-0 select-none';
-                            } else {
-                                altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-gray-400 shrink-0 select-none';
-                            }
-                        } else {
-                            altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-gray-400 shrink-0 select-none';
-                        }
-                    }
-
-                    // 列 3: 状态/剩余时间徽标（等宽药丸，字重统一为 font-medium 保证全行整齐划一）
-                    if (timeBadge) {
-                        timeBadge.innerText = pInfo.time_badge || pInfo.badge || '--';
-
-                        if (pInfo.status === 'observing') {
-                            pBar.style.width = `${pInfo.pct}%`;
-                            if (pInfo.pct > 30) {
-                                pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-emerald-100/80 transition-all duration-700 ease-out pointer-events-none';
-                                timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs whitespace-nowrap';
-                            } else {
-                                pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-amber-100/90 transition-all duration-700 ease-out pointer-events-none';
-                                timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs whitespace-nowrap';
-                            }
-                        } else if (pInfo.status === 'waiting') {
-                            pBar.style.width = '100%';
-                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-blue-50/70 border-r border-blue-200 transition-all duration-700 ease-out pointer-events-none';
-                            timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs whitespace-nowrap';
-                        } else {
-                            pBar.style.width = '0%';
-                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-gray-100 transition-all duration-700 ease-out pointer-events-none';
-                            timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-gray-100 text-gray-500 shadow-2xs whitespace-nowrap';
-                        }
-                    }
-                });
+                observationStatus = data;
+                renderObservationStatus(data);
             } catch (e) {
                 console.error("Failed to fetch dynamic observation status:", e);
             }
+        }
+
+        function renderObservationStatus(data) {
+            const obs = document.getElementById('observatory').value || '286';
+            // 1. 更新顶部当夜状态指示徽标与测站徽标（按台站编号显示）
+            const nightBadge = document.getElementById('nightBadge');
+            if (nightBadge && data.station) {
+                const stCode = data.station.code || obs;
+                const name = stationName(data.station.name, stCode);
+                const namePart = translate(' ' + name.split(' ')[0].replace(/天文台|观测站|望远镜/g, ''), '');
+                const tw = data.twilight;
+
+                if (stCode === '500') {
+                    nightBadge.innerText = translate('[500] 全天无地平', '[500] Geocentric');
+                    nightBadge.parentElement.title = translate(
+                        '地心坐标 (500) · 全天无地平限制', 'Geocentric coordinates (500), no local horizon'
+                    );
+                } else if (tw?.dusk && tw.dusk !== '--:--') {
+                    const sunrisePart = (tw.sunrise && tw.sunrise !== '--:--')
+                        ? ` (${translate('日出', 'Sunrise')} ${tw.sunrise})` : '';
+                    nightBadge.innerText = `[${stCode}${namePart}] ${translate('暗夜', 'Night')} ${tw.dusk} ~ ${tw.dawn}${sunrisePart}`;
+                    const offset = tw.solar_offset_min > 0 ? `+${tw.solar_offset_min}` : tw.solar_offset_min;
+                    const lagText = offset ? translate(` · 平太阳时时差 ${offset}分`, ` · Mean solar time offset ${offset} min`) : '';
+                    nightBadge.parentElement.title = translate(
+                        `测站 [${stCode}] ${name}${lagText} · ${data.night_date} 观测窗口: 适测暗夜 ${tw.dusk} ~ ${tw.dawn} (深空纯暗夜 ${tw.dusk_astro || tw.dusk} ~ ${tw.dawn_astro || tw.dawn}，当地日出 ${tw.sunrise || '--:--'})`,
+                        `[${stCode}] ${name}${lagText} · ${data.night_date} (UTC+8) · Observing night ${tw.dusk}–${tw.dawn}, astronomical darkness ${tw.dusk_astro || tw.dusk}–${tw.dawn_astro || tw.dawn}, sunrise ${tw.sunrise || '--:--'}`
+                    );
+                } else {
+                    const label = translate('暗夜时段不可用', 'Night window unavailable');
+                    nightBadge.innerText = `[${stCode}${namePart}] ${label}`;
+                    nightBadge.parentElement.title = label;
+                }
+            }
+            const stBadge = document.getElementById('currentStationBadge');
+            if (stBadge && data.station) {
+                const stCode = data.station.code || obs;
+                const name = stationName(data.station.name, stCode);
+                stBadge.innerText = `${stCode} ${translate(name.split(' ')[0], name)}`;
+                stBadge.title = name;
+            }
+
+            // 2. 动态更新每个天体按钮的实时高度角、底色进度条和时间徽标（表格化分列渲染，统一中等字重）
+            const labels = document.querySelectorAll('#satelliteButtonsContainer label[data-planet]');
+            labels.forEach(label => {
+                const planet = label.getAttribute('data-planet');
+                const pInfo = data.planets ? data.planets[planet] : null;
+                const pBar = label.querySelector('.obs-progress-bar');
+                const altBadge = label.querySelector('.sat-alt-badge');
+                const timeBadge = label.querySelector('.sat-time-badge');
+                if (!pInfo || !pBar) return;
+
+                const altitude = pInfo.alt_deg == null ? '' : `Altitude ${pInfo.alt_deg.toFixed(1)}° · `;
+                const tooltip = {
+                    observing: `${pInfo.remaining_time} left · ${pInfo.start}–${pInfo.end} (UTC+8)`,
+                    waiting: `Window opens at ${pInfo.start} (UTC+8)`,
+                    ended: `Window ended at ${pInfo.end} (UTC+8)`,
+                    none: 'No observing window'
+                };
+                label.title = translate(pInfo.tooltip || pInfo.badge || '', altitude + (tooltip[pInfo.status] || ''));
+
+                // 列 2: 实时高度角（等宽区域对齐）
+                if (altBadge) {
+                    altBadge.innerText = pInfo.alt_str || '--';
+                    if (pInfo.alt_deg !== null && pInfo.alt_deg !== undefined) {
+                        if (pInfo.alt_deg >= 30) {
+                            altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-emerald-800 shrink-0 select-none';
+                        } else if (pInfo.alt_deg > 0) {
+                            altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-amber-800 shrink-0 select-none';
+                        } else {
+                            altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-gray-400 shrink-0 select-none';
+                        }
+                    } else {
+                        altBadge.className = 'sat-alt-badge w-10 text-right font-mono font-bold text-[11px] text-gray-400 shrink-0 select-none';
+                    }
+                }
+
+                // 列 3: 状态/剩余时间徽标（等宽药丸，字重统一为 font-medium 保证全行整齐划一）
+                if (timeBadge) {
+                    const badges = {
+                        observing: `${pInfo.remaining_time} left`,
+                        waiting: `${pInfo.start} ↑`,
+                        ended: 'Ended',
+                        none: 'None'
+                    };
+                    timeBadge.innerText = translate(pInfo.time_badge || pInfo.badge || '--', badges[pInfo.status] || '--');
+
+                    if (pInfo.status === 'observing') {
+                        pBar.style.width = `${pInfo.pct}%`;
+                        if (pInfo.pct > 30) {
+                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-emerald-100/80 transition-all duration-700 ease-out pointer-events-none';
+                            timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200/80 shadow-2xs whitespace-nowrap';
+                        } else {
+                            pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-amber-100/90 transition-all duration-700 ease-out pointer-events-none';
+                            timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-amber-50 text-amber-800 border border-amber-200/80 shadow-2xs whitespace-nowrap';
+                        }
+                    } else if (pInfo.status === 'waiting') {
+                        pBar.style.width = '100%';
+                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-blue-50/70 border-r border-blue-200 transition-all duration-700 ease-out pointer-events-none';
+                        timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-blue-50 text-blue-700 border border-blue-200/80 shadow-2xs whitespace-nowrap';
+                    } else {
+                        pBar.style.width = '0%';
+                        pBar.className = 'obs-progress-bar absolute inset-y-0 left-0 bg-gray-100 transition-all duration-700 ease-out pointer-events-none';
+                        timeBadge.className = 'sat-time-badge w-[58px] text-center font-mono font-bold text-[10px] px-1 py-0.5 rounded shrink-0 ml-1.5 bg-gray-100 text-gray-500 shadow-2xs whitespace-nowrap';
+                    }
+                }
+            });
         }
 
         // --- 目标点选即自动切换计算 ---
@@ -727,7 +769,7 @@
             const obsHidden = document.getElementById('observatory');
             const val = customInput.value.trim().toUpperCase();
             if (!val) {
-                alert("请输入测站代码");
+                alert(translate('请输入测站代码', 'Enter an observatory code.'));
                 return;
             }
             obsHidden.value = val;
@@ -735,26 +777,50 @@
         }
 
         function onObservatoryChange() {
-            updateObservationProgress(false);
+            updateObservationProgress();
             submitCalculation();
         }
 
         // 页面初始化：按导师要求先查当前天体出证认图，后台异步拉取其他天体的高度角与倒计时，互不拉垮时间
         document.addEventListener('DOMContentLoaded', () => {
+            localizePage();
+            refreshLocalizedResults();
             // 1. 优先异步拉取所有天体的实时高度角与暗夜窗口（毫秒级点亮顶栏与磁贴徽标）
-            updateObservationProgress(false);
+            updateObservationProgress();
             // 2. 紧随其后提交默认目标星历与证认图
             setTimeout(() => {
                 submitCalculation();
             }, 50);
             // 3. 之后每分钟自动静默刷新一次
-            setInterval(() => updateObservationProgress(false), 60000);
+            setInterval(() => updateObservationProgress(), 60000);
         });
 
         // 全局数据存储
         let currentResults = [];
         let currentPreviewUrl = null;
         let currentPreviewFilename = null;
+        let observationStatus = null;
+        let calculationError = null;
+
+        function refreshLocalizedResults() {
+            updateCalculateLabel();
+            if (observationStatus) renderObservationStatus(observationStatus);
+            if (!document.getElementById('resultArea').classList.contains('hidden')) {
+                renderResults(currentResults, currentTargetInfo, resultStation);
+            }
+            if (calculationError) showError(...calculationError);
+            const previewError = document.querySelector('#previewContent [data-preview-error]');
+            if (previewError && previewErrorDetails) {
+                previewError.textContent = translate(...previewErrorDetails);
+            }
+        }
+
+        function updateCalculateLabel() {
+            const isLoading = document.getElementById('submitBtn').disabled;
+            document.getElementById('btnText').textContent = isLoading
+                ? translate('计算中...', 'Calculating…')
+                : translate('开始计算', 'Calculate');
+        }
 
         // --- UTC 时钟逻辑 ---
         function updateClock() {
@@ -762,7 +828,10 @@
             const pad = n => n.toString().padStart(2, '0');
             const utcTime = `${now.getUTCFullYear()}-${pad(now.getUTCMonth() + 1)}-${pad(now.getUTCDate())} ${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())}`;
             const clockEl = document.getElementById('utcClock');
-            if (clockEl) clockEl.innerText = utcTime;
+            if (clockEl) {
+                clockEl.innerText = window.matchMedia('(min-width: 640px)').matches ? utcTime : utcTime.slice(11);
+                clockEl.title = utcTime + ' UTC';
+            }
         }
         setInterval(updateClock, 1000);
         updateClock();
@@ -785,7 +854,6 @@
         async function submitCalculation() {
             const btn = document.getElementById('submitBtn');
             const loader = document.getElementById('btnLoader');
-            const btnText = document.getElementById('btnText');
             const resultArea = document.getElementById('resultArea');
             const emptyState = document.getElementById('emptyState');
             const resultCards = document.getElementById('resultCards');
@@ -808,13 +876,13 @@
             }
 
             if (!satellite) {
-                alert("请选择或输入一个目标天体");
+                alert(translate('请选择或输入一个目标天体', 'Select a target or enter a target code.'));
                 return;
             }
 
             const observatory = document.getElementById('observatory').value.trim();
             if (!observatory) {
-                alert("请输入观测站代码");
+                alert(translate('请输入观测站代码', 'Enter an observatory code.'));
                 return;
             }
 
@@ -840,7 +908,8 @@
             btn.disabled = true;
             btn.classList.add('opacity-75', 'cursor-not-allowed');
             loader.style.display = 'block';
-            btnText.innerText = '计算中...';
+            updateCalculateLabel();
+            calculationError = null;
             errorMsg.classList.add('hidden');
             resultArea.classList.add('hidden');
             emptyState.classList.remove('hidden');
@@ -868,7 +937,8 @@
                 if (result.success) {
                     currentResults = result.data;
                     currentTargetInfo = result.target_info || null;
-                    currentStation = result.station || null;
+                    currentTargetCode = satellite;
+                    currentStation = resultStation = result.station || null;
                     emptyState.classList.add('hidden');
                     resultArea.classList.remove('hidden');
                     renderResults(result.data, result.target_info, result.station);
@@ -880,60 +950,73 @@
                         }, 300);
                     }
                 } else {
-                    showError(result.message || '未知错误');
+                    showError(result.message || '未知错误', result.message_en || 'An unexpected error occurred.');
                 }
             } catch (err) {
-                showError('请求失败: ' + err.message);
+                showError('请求失败: ' + err.message, 'Request failed: ' + err.message);
             } finally {
                 btn.disabled = false;
                 btn.classList.remove('opacity-75', 'cursor-not-allowed');
                 loader.style.display = 'none';
-                btnText.innerText = '开始计算';
+                updateCalculateLabel();
             }
         }
 
-        function showError(msg) {
+        function showError(chinese, english) {
+            calculationError = [chinese, english];
             const errorMsg = document.getElementById('errorMsg');
-            document.getElementById('errorText').innerText = msg;
+            document.getElementById('errorText').textContent = translate(chinese, english);
             errorMsg.classList.remove('hidden');
         }
 
         // 渲染结果列表（含测站高度角与直径）
         let currentTargetInfo = null;
+        let currentTargetCode = '';
         let currentStation = null;
+        let resultStation = null;
         let currentPreviewItem = null;
         let currentPreviewSatellite = null;
+        let previewErrorDetails = null;
+
+        function altitudeText(item) {
+            return item.obs_status === 'geocentric' ? translate('地心', 'Geocentric') : (item.alt_str || '--');
+        }
+
+        function altitudeStatus(item, detailed = false) {
+            if (item.obs_status === 'geocentric') return 'No local horizon';
+            if (item.is_observable) return detailed ? 'Observable (≥30°)' : 'Observable';
+            if (item.alt_deg >= 0) return detailed ? 'Low (<30°)' : 'Low';
+            return detailed ? 'Below horizon' : 'Below';
+        }
 
         function renderResults(data, targetInfo = currentTargetInfo, station = currentStation) {
             const container = document.getElementById('resultCards');
             if (!data || data.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-sm p-4">暂无数据</p>';
+                container.innerHTML = `<p class="text-gray-500 text-sm p-4">${translate('暂无数据', 'No results')}</p>`;
                 return;
             }
 
             const first = data[0];
-            const chosenCode = (document.getElementById('customSatellite')?.value || '').trim() ||
-                              (document.getElementById('extraSatelliteSelect')?.value || '').trim() ||
-                              document.querySelector('input[name="satellite"]:checked')?.value || '';
-            const tName = targetInfo?.name || `天体 ${chosenCode}`;
+            const tName = targetName(targetInfo?.name, currentTargetCode);
             const diameter = first.diameter || targetInfo?.diameter || '--';
             const angularSize = first.angular_size || targetInfo?.angular_size || '--';
             const mag = first.mag || targetInfo?.mag || '--';
             const currentObsInput = (document.getElementById('observatory').value || '286').trim();
             const stCode = first.station_code || station?.code || currentObsInput;
-            const stName = first.station_name || station?.name || `测站 ${stCode}`;
+            const stName = stationName(first.station_name || station?.name, stCode);
 
             // 更新左侧测站徽标
             const stBadge = document.getElementById('currentStationBadge');
             if (stBadge) {
-                const shortName = stName.split(' ')[0];
+                const shortName = translate(stName.split(' ')[0], stName);
+                stBadge.title = stName;
                 stBadge.innerText = `${shortName} (${stCode})`;
             }
 
             // 顶部精简摘要
             const summaryHeader = document.getElementById('targetSummaryHeader');
             if (summaryHeader) {
-                summaryHeader.innerHTML = `<span>高度角 (${stCode}): <strong class="${first.is_observable ? 'text-emerald-600' : 'text-amber-600'}">${first.alt_str}</strong></span>`;
+                summaryHeader.innerHTML = `<span>${translate('高度角', 'Altitude')} (${stCode}): <strong class="${first.is_observable ? 'text-emerald-600' : 'text-amber-600'}">${altitudeText(first)}</strong></span>`;
             }
 
             // 目标详细状态横幅
@@ -941,14 +1024,14 @@
                 <div class="p-3 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border-b border-blue-100 flex flex-wrap items-center justify-between gap-2.5 text-xs">
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-gray-900 text-sm">${tName}</span>
-                        ${mag !== '--' ? `<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold text-[11px]">星等 ${mag}</span>` : ''}
+                        ${mag !== '--' ? `<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold text-[11px]">${translate('星等', 'Mag.')} ${mag}</span>` : ''}
                     </div>
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-600">
-                        <div><span class="text-gray-400">测站:</span> <span class="font-medium text-gray-800">${stName} (${stCode})</span></div>
+                        <div><span class="text-gray-400">${translate('测站', 'Station')}:</span> <span class="font-medium text-gray-800">${stName} (${stCode})</span></div>
                         <div>
-                            <span class="text-gray-400">高度角:</span>
-                            <span class="font-bold font-mono text-sm ${first.is_observable ? 'text-emerald-700' : (first.alt_deg >= 0 ? 'text-amber-700' : 'text-gray-500')}">${first.alt_str}</span>
-                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${first.is_observable ? 'bg-emerald-100 text-emerald-800' : (first.alt_deg >= 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600')}">${first.status_text || (first.is_observable ? '适测 ≥30°' : '低空')}</span>
+                            <span class="text-gray-400">${translate('高度角', 'Altitude')}:</span>
+                            <span class="font-bold font-mono text-sm ${first.is_observable ? 'text-emerald-700' : (first.alt_deg >= 0 ? 'text-amber-700' : 'text-gray-500')}">${altitudeText(first)}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${first.is_observable ? 'bg-emerald-100 text-emerald-800' : (first.alt_deg >= 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600')}">${translate(first.status_text || (first.is_observable ? '适测 ≥30°' : '低空'), altitudeStatus(first, true))}</span>
                         </div>
 
                     </div>
@@ -961,12 +1044,12 @@
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-gray-50 text-gray-600 text-xs uppercase sticky top-0">
                             <tr>
-                                <th class="px-3 py-2 font-semibold border-b">时间 (UTC)</th>
-                                <th class="px-3 py-2 font-semibold border-b text-center">高度角 (${stCode})</th>
-                                <th class="px-3 py-2 font-semibold border-b">赤经 (R.A.)</th>
-                                <th class="px-3 py-2 font-semibold border-b">赤纬 (Dec.)</th>
+                                <th class="px-3 py-2 font-semibold border-b">${translate('时间 (UTC)', 'Time (UTC)')}</th>
+                                <th class="px-3 py-2 font-semibold border-b text-center">${translate('高度角', 'Altitude')} (${stCode})</th>
+                                <th class="px-3 py-2 font-semibold border-b">${translate('赤经 (R.A.)', 'R.A.')}</th>
+                                <th class="px-3 py-2 font-semibold border-b">${translate('赤纬 (Dec.)', 'Dec.')}</th>
                                 
-                                <th class="px-3 py-2 font-semibold border-b text-right">操作</th>
+                                <th class="px-3 py-2 font-semibold border-b text-right">${translate('操作', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody class="text-sm font-mono text-gray-700 divide-y divide-gray-100">
@@ -975,19 +1058,21 @@
                                 const altColor = isObs 
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                     : (item.alt_deg >= 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-500 border-gray-200');
-                                const statusPill = isObs 
-                                    ? '<span class="text-[10px] text-emerald-600 font-sans ml-1">适测</span>' 
-                                    : (item.alt_deg >= 0 ? '<span class="text-[10px] text-amber-600 font-sans ml-1">低空</span>' : '<span class="text-[10px] text-gray-400 font-sans ml-1">落</span>');
+                                const statusColor = isObs ? 'text-emerald-600' : (item.alt_deg >= 0 ? 'text-amber-600' : 'text-gray-400');
+                                const label = item.obs_status === 'geocentric' ? '' : translate(
+                                    isObs ? '适测' : (item.alt_deg >= 0 ? '低空' : '落'), altitudeStatus(item)
+                                );
+                                const statusPill = label ? `<span class="text-[10px] ${statusColor} font-sans ml-1">${label}</span>` : '';
                                 
                                 const diamText = item.diameter && item.diameter !== '--' ? item.diameter : diameter;
                                 const angText = item.angular_size && item.angular_size !== '--' ? item.angular_size : angularSize;
 
                                 return `
-                                <tr class="hover:bg-blue-50/60 transition cursor-pointer ${index === 0 ? 'bg-blue-50/20' : ''}" onclick="handlePreviewDSS(${index})" title="点击切换该时刻寻星图并同步 Stellarium 模拟">
+                                <tr class="hover:bg-blue-50/60 transition cursor-pointer ${index === 0 ? 'bg-blue-50/20' : ''}" onclick="handlePreviewDSS(${index})" title="${translate('点击切换该时刻寻星图并同步 Stellarium 模拟', 'Show the finder chart and Stellarium view for this time')}">
                                     <td class="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">${item.time}</td>
                                     <td class="px-3 py-2.5 whitespace-nowrap text-center">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${altColor}">
-                                            ${item.alt_str || '--'}
+                                            ${altitudeText(item)}
                                             ${statusPill}
                                         </span>
                                     </td>
@@ -997,11 +1082,11 @@
                                     <td class="px-3 py-2.5 text-right whitespace-nowrap">
                                         <button onclick="event.stopPropagation(); copyRowCoordinates(${index}, this)" 
                                             class="px-2.5 py-1 text-xs font-medium border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
-                                            title="复制赤经赤纬 (可直接粘贴至望远镜控制台)">
+                                            title="${translate('复制赤经赤纬 (可直接粘贴至望远镜控制台)', 'Copy coordinates for a telescope controller')}">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                             </svg>
-                                            复制坐标
+                                            ${translate('复制坐标', 'Copy coordinates')}
                                         </button>
                                     </td>
                                 </tr>
@@ -1018,7 +1103,7 @@
         // 针对行序号的精确复制（避免字符串内换行导致的 HTML 属性语法错误）
         function copyRowCoordinates(index, btn) {
             if (!currentResults || !currentResults[index]) {
-                alert("未找到该行坐标数据");
+                alert(translate('未找到该行坐标数据', 'No coordinates found for this row.'));
                 return;
             }
             const item = currentResults[index];
@@ -1063,14 +1148,14 @@
 
             if (success) {
                 const originalHtml = btn.innerHTML;
-                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-green-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg> <span class="text-green-600 font-bold">已复制</span>`;
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-green-600" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg> <span class="text-green-600 font-bold">${translate('已复制', 'Copied')}</span>`;
                 btn.classList.add('text-green-600', 'border-green-300', 'bg-green-50');
                 setTimeout(() => {
                     btn.innerHTML = originalHtml;
                     btn.classList.remove('text-green-600', 'border-green-300', 'bg-green-50');
                 }, 1500);
             } else {
-                prompt("自动复制受限，请长按下方文字手动复制：", text);
+                prompt(translate('自动复制受限，请长按下方文字手动复制：', 'Copy the coordinates manually:'), text);
             }
         }
 
@@ -1086,7 +1171,7 @@
             // 准备 UI
             const previewContainer = document.getElementById('previewContainer');
             const previewContent = document.getElementById('previewContent');
-            const previewActions = document.getElementById('previewActions');
+            previewErrorDetails = null;
 
             previewContainer.classList.remove('hidden');
             // 滚动到预览区域
@@ -1103,14 +1188,17 @@
                     satelliteName = customInput;
                 } else if (extraSel && extraSel.value && extraSel.value !== 'custom') {
                     const opt = extraSel.options[extraSel.selectedIndex];
-                    satelliteName = opt ? opt.text.split(' - ')[1]?.split(' (')[0] || opt.text : extraSel.value;
-                } else if (satelliteInput && satelliteInput.nextElementSibling) {
-                    satelliteName = satelliteInput.nextElementSibling.innerText.trim();
+                    const label = originalTranslations.get(opt)?.text || opt?.text;
+                    satelliteName = label ? label.split(' - ')[1]?.split(' (')[0] || label : extraSel.value;
+                } else if (satelliteInput) {
+                    satelliteName = satelliteInput.dataset.name;
                 } else {
                     satelliteName = currentTargetInfo?.name || "Target";
                 }
             }
             currentPreviewSatellite = satelliteName;
+            currentPreviewUrl = null;
+            currentPreviewFilename = null;
 
             // 立即渲染 Stellarium 星象按钮（即使 DSS 加载中或断网也能随时查看 3D 星象）
             renderPreviewActions(false);
@@ -1119,9 +1207,11 @@
             previewContent.innerHTML = `
                 <div class="flex flex-col items-center gap-3">
                     <div class="loader block border-white border-t-purple-500"></div>
-                    <p class="text-gray-400 text-sm">正在从 STScI 获取图像 (${fov}' x ${fov}')...</p>
+                    <p class="text-gray-400 text-sm"><span data-en-text="Retrieving image from STScI…">正在从 STScI 获取图像...</span> (${fov}' × ${fov}')</p>
                 </div>
             `;
+
+            localizeMarkup(previewContent);
 
             try {
                 const response = await fetch('/api/download_chart', {
@@ -1145,35 +1235,45 @@
 
                     previewContent.innerHTML = `
                         <div class="relative w-full h-full flex items-center justify-center">
-                            <img src="${currentPreviewUrl}" alt="DSS Chart" class="max-h-full max-w-full object-contain rounded shadow-lg border border-gray-700 cursor-zoom-in" onclick="openFullscreen()" title="点击全屏查看">
+                            <img src="${currentPreviewUrl}" alt="DSS 寻星图" data-en-alt="DSS finder chart" class="max-h-full max-w-full object-contain rounded shadow-lg border border-gray-700 cursor-zoom-in" onclick="openFullscreen()" title="点击全屏查看" data-en-title="Open fullscreen">
                             <div class="target-marker" aria-hidden="true">
                             </div>
                             <div class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2.5 py-1 rounded pointer-events-none flex items-center gap-2 font-mono">
                                 <span>FOV: ${fov}'</span>
                                 ${(() => {
                                     const cObs = (document.getElementById('observatory').value || '286').trim();
-                                    return item.alt_str ? `<span class="text-emerald-400">| ${cObs}高度: ${item.alt_str}</span>` : '';
+                                    return item.alt_str ? `<span class="text-emerald-400">| ${cObs} <span data-en-text="Alt.">高度</span>: <span data-en-text="${item.obs_status === 'geocentric' ? 'Geocentric' : item.alt_str}">${item.alt_str}</span></span>` : '';
                                 })()}
                             </div>
                         </div>
                     `;
 
-                    // 显示真正的下载按钮与 Stellarium 联动
+                    localizeMarkup(previewContent);
                     renderPreviewActions(true);
                 } else {
-                    throw new Error(result.message);
+                    showPreviewError(result.message, result.message_en);
                 }
             } catch (err) {
-                previewContent.innerHTML = `
-                    <div class="flex flex-col items-center gap-2 text-red-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p>加载失败: ${err.message}</p>
-                    </div>
-                `;
-                renderPreviewActions(false);
+                showPreviewError(err.message, err.message);
             }
+        }
+
+        function showPreviewError(chinese, english) {
+            previewErrorDetails = [
+                '加载失败: ' + (chinese || '未知错误'),
+                'Could not load the chart: ' + (english || 'Unexpected error.')
+            ];
+            const previewContent = document.getElementById('previewContent');
+            previewContent.innerHTML = `
+                <div class="flex flex-col items-center gap-2 text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p data-preview-error></p>
+                </div>
+            `;
+            previewContent.querySelector('[data-preview-error]').textContent = translate(...previewErrorDetails);
+            renderPreviewActions(false);
         }
 
         // 渲染图像预览卡片操作按钮（Stellarium 星象次级按钮 + 保存图片主按钮）
@@ -1184,13 +1284,13 @@
             let html = `
                 <button type="button" onclick="openStellariumSimulation()" 
                     class="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-300 hover:border-blue-300 text-xs font-medium rounded flex items-center gap-1.5 transition shadow-2xs cursor-pointer active:scale-95" 
-                    title="在新窗口打开 Stellarium 星象 (自动同步当前台站坐标、观测时间、视场与行星系)">
+                    title="在新窗口打开 Stellarium 星象 (自动同步当前台站坐标、观测时间、视场与行星系)" data-en-title="Open Stellarium with the current location, time, field of view, and planet">
                     <svg class="h-3.5 w-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                         <path d="M2 12h20"></path>
                     </svg>
-                    <span>Stellarium 星象</span>
+                    <span data-en-text="Stellarium">Stellarium 星象</span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
@@ -1203,12 +1303,13 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        <span>保存图片</span>
+                        <span data-en-text="Save image">保存图片</span>
                     </button>
                 `;
             }
 
             previewActions.innerHTML = html;
+            localizeMarkup(previewActions);
         }
 
         // 解析对应母行星（Stellarium 3D 天象视图居中目标，使同系统内所有卫星同屏呈现）
@@ -1363,8 +1464,8 @@
         class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                <h3 class="text-xl font-bold text-gray-800">使用指南</h3>
-                <button onclick="toggleModal('guideModal')" class="text-gray-400 hover:text-gray-600 transition">
+                <h3 class="text-xl font-bold text-gray-800" data-en-text="User Guide">使用指南</h3>
+                <button onclick="toggleModal('guideModal')" aria-label="关闭指南" data-en-aria-label="Close guide" class="text-gray-400 hover:text-gray-600 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1372,7 +1473,7 @@
                     </svg>
                 </button>
             </div>
-            <div class="p-6 sm:p-8 overflow-y-auto prose text-sm text-gray-600 space-y-4">
+            <div class="p-6 sm:p-8 overflow-y-auto prose text-sm text-gray-600 space-y-4" lang="zh-CN" data-guide-lang>
                 <div>
                     <h4 class="font-bold text-gray-900 text-base mb-2">1. 目标天体与备选列表</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
@@ -1421,9 +1522,10 @@
                     • 顶部导航栏右侧显示实时运行的 UTC 时钟，方便国际天文观测对照。
                 </div>
             </div>
+            {% include 'guide_en.html' %}
             <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
                 <button onclick="toggleModal('guideModal')"
-                    class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition">知道了</button>
+                    class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition" data-en-text="Close">知道了</button>
             </div>
         </div>
     </div>
@@ -1437,7 +1539,7 @@
         <div
             class="absolute top-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-gray-800 bg-opacity-90 rounded-full px-6 py-2 z-50 shadow-2xl border border-gray-700 backdrop-blur-md">
             <button onclick="changeZoom(0.2)"
-                class="text-white hover:text-blue-400 p-1 transition transform active:scale-90" title="放大">
+                class="text-white hover:text-blue-400 p-1 transition transform active:scale-90" title="放大" data-en-title="Zoom in">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1446,7 +1548,7 @@
             </button>
             <span id="zoomLevel" class="text-xs text-gray-300 font-mono w-14 text-center select-none">100%</span>
             <button onclick="changeZoom(-0.2)"
-                class="text-white hover:text-blue-400 p-1 transition transform active:scale-90" title="缩小">
+                class="text-white hover:text-blue-400 p-1 transition transform active:scale-90" title="缩小" data-en-title="Zoom out">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 12H6" />
@@ -1454,12 +1556,12 @@
             </button>
             <div class="w-px h-4 bg-gray-600 mx-1"></div>
             <button onclick="resetZoom()" class="text-white hover:text-blue-400 p-1 text-xs font-medium transition"
-                title="重置">
-                Reset
+                title="重置" data-en-title="Reset zoom" data-en-text="Reset">
+                重置
             </button>
         </div>
 
-        <button onclick="toggleModal('fullscreenModal')"
+        <button onclick="toggleModal('fullscreenModal')" aria-label="关闭全屏" data-en-aria-label="Close fullscreen"
             class="absolute top-4 right-4 text-white hover:text-gray-300 z-50 p-2 bg-black bg-opacity-20 rounded-full hover:bg-opacity-40 transition">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24"
                 stroke="currentColor">
@@ -1472,7 +1574,7 @@
             onmouseleave="endDrag()">
             <div id="fullscreenStage" class="relative inline-block transition-transform duration-75 ease-out will-change-transform"
                 style="transform: translate(0px, 0px) scale(1);">
-                <img id="fullscreenImage" src="" class="block max-w-none shadow-2xl rounded-sm">
+                <img id="fullscreenImage" alt="DSS 寻星图" data-en-alt="DSS finder chart" class="block max-w-none shadow-2xl rounded-sm">
                 <div id="fullscreenTargetMarker" class="target-marker" aria-hidden="true">
                 </div>
             </div>

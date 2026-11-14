@@ -1,0 +1,40 @@
+            <div class="p-6 sm:p-8 overflow-y-auto prose text-sm text-gray-600 space-y-4" lang="en" data-guide-lang hidden>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-base mb-2">1. Choosing a target</h4>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li>The ten preset buttons show the current altitude and observing window at the selected station. Green means at least 30% of the window remains, orange means less than 30%, blue means the window has yet to start, and gray means it has ended. Select a target to calculate its ephemeris and generate a finder chart.</li>
+                        <li>The dropdown includes Jupiter’s Galilean moons (<code>5001</code>–<code>5004</code>), more moons of Saturn and Uranus, and planet centers. Choose <strong>Enter a satellite code</strong> to enter an MSU natural satellite code manually.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-base mb-2">2. Observatory and night window</h4>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li>Choose a preset observatory, enter a three-character IAU/MPC station code, or select <code>500</code> for geocentric coordinates.</li>
+                        <li>The header shows the selected station’s observing window in Beijing time (UTC+8). Hover over it for the astronomical darkness window and sunrise.</li>
+                        <li>When MSU does not list a station, the tool requests geocentric coordinates and uses the selected station’s location to compute altitude and twilight.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-base mb-2">3. Observation time</h4>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li>Leave the field blank to use the current time. Enter a specific time in Beijing time (UTC+8), for example <code>2026 11 05 21 30 00</code> or <code>20261105213000</code>. The tool converts it to UTC for the ephemeris.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-base mb-2">4. Reading and copying coordinates</h4>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li>Declination includes a sign, even between −1° and +1°. Right ascension and declination use two digits for hours or degrees and minutes. Click <strong>Copy coordinates</strong> to copy the values for a telescope controller.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-bold text-gray-900 text-base mb-2">5. Altitude and DSS finder charts</h4>
+                    <ul class="list-disc pl-5 space-y-1.5">
+                        <li>Green indicates altitude of at least 30°, amber indicates 0° up to 30°, and gray indicates below the horizon.</li>
+                        <li>The STScI DSS red-band finder chart marks the target with a red crosshair. Open it fullscreen to zoom and pan, save the chart, or open the view in Stellarium.</li>
+                    </ul>
+                </div>
+                <div class="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs space-y-1">
+                    <p>Ephemerides are provided by SAI MSU. Finder charts use the STScI Digitized Sky Survey.</p>
+                    <p>The clock in the header shows the current UTC time.</p>
+                </div>
+            </div>

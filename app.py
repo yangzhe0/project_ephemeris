@@ -62,8 +62,18 @@ SATELLITES = [
 ]
 
 
-def _json_error(message: str, status: int = 400):
-    return jsonify({"success": False, "message": message}), status
+class InputError(ValueError):
+    def __init__(self, message: str, message_en: str):
+        super().__init__(message)
+        self.message_en = message_en
+
+
+def _error_payload(message: str, message_en: str):
+    return {"success": False, "message": message, "message_en": message_en}
+
+
+def _json_error(message: str, message_en: str, status: int = 400):
+    return jsonify(_error_payload(message, message_en)), status
 
 
 def _get_json_object():
@@ -71,23 +81,29 @@ def _get_json_object():
     return data if isinstance(data, dict) else None
 
 
-def _bounded_int(value, name: str, minimum: int, maximum: int) -> int:
+def _bounded_int(value, name: str, name_en: str, minimum: int, maximum: int) -> int:
     try:
         parsed = int(str(value))
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} 必须是整数") from exc
+        raise InputError(f"{name} 必须是整数", f"{name_en} must be an integer.") from exc
     if not minimum <= parsed <= maximum:
-        raise ValueError(f"{name} 必须在 {minimum} 到 {maximum} 之间")
+        raise InputError(
+            f"{name} 必须在 {minimum} 到 {maximum} 之间",
+            f"{name_en} must be between {minimum} and {maximum}.",
+        )
     return parsed
 
 
-def _bounded_float(value, name: str, minimum: float, maximum: float) -> float:
+def _bounded_float(value, name: str, name_en: str, minimum: float, maximum: float) -> float:
     try:
         parsed = float(str(value))
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} 必须是数字") from exc
+        raise InputError(f"{name} 必须是数字", f"{name_en} must be a number.") from exc
     if not math.isfinite(parsed) or not minimum <= parsed <= maximum:
-        raise ValueError(f"{name} 必须在 {minimum:g} 到 {maximum:g} 之间")
+        raise InputError(
+            f"{name} 必须在 {minimum:g} 到 {maximum:g} 之间",
+            f"{name_en} must be between {minimum:g} and {maximum:g}.",
+        )
     return parsed
 
 
@@ -96,7 +112,7 @@ def _parse_coordinates(ra: str, dec: str) -> tuple[str, str]:
     # 兼容负赤纬在 0° 到 -1° 之间时 MSU 返回的 "0 -39 24.8" 或 "-0 39 24.8" 等特殊天文格式
     dec_match = re.fullmatch(r"\s*([+-]?\d{1,2})\s+([+-]?\d{1,2})\s+([+-]?\d+(?:\.\d+)?)\s*", dec)
     if not ra_match or not dec_match:
-        raise ValueError("赤经或赤纬格式错误")
+        raise InputError("赤经或赤纬格式错误", "Invalid right ascension or declination format.")
 
     rah, ram, ras_str = ra_match[1], ra_match[2], ra_match[3]
     raw_d, raw_m, raw_s = dec_match[1], dec_match[2], dec_match[3]
@@ -109,9 +125,9 @@ def _parse_coordinates(ra: str, dec: str) -> tuple[str, str]:
     des_val = abs(float(raw_s))
 
     if rah_val > 23 or ram_val > 59 or ras_val >= 60:
-        raise ValueError("赤经超出有效范围")
+        raise InputError("赤经超出有效范围", "Right ascension is out of range.")
     if ded_val > 90 or dem_val > 59 or des_val >= 60 or (ded_val == 90 and (dem_val or des_val)):
-        raise ValueError("赤纬超出有效范围")
+        raise InputError("赤纬超出有效范围", "Declination is out of range.")
 
     # 赤纬统一明确携带正负号（正赤纬强制带 +，负赤纬带 -）
     sign = "-" if is_negative else "+"
@@ -454,9 +470,9 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
         )
         response.raise_for_status()
     except requests.Timeout:
-        return {"success": False, "message": "星历服务器请求超时，请稍后重试"}
+        return _error_payload("星历服务器请求超时，请稍后重试", "The ephemeris server timed out. Try again shortly.")
     except requests.RequestException:
-        return {"success": False, "message": "无法连接星历服务器，请稍后重试"}
+        return _error_payload("无法连接星历服务器，请稍后重试", "Could not reach the ephemeris server. Try again shortly.")
 
     soup = BeautifulSoup(response.text, "html.parser")
     pre_tag = soup.find("pre")
@@ -483,25 +499,24 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
             pass
 
     if not pre_tag:
-        return {"success": False, "message": "星历服务器未返回预期的数据格式"}
+        return _error_payload("星历服务器未返回预期的数据格式", "The ephemeris server returned an unexpected format.")
 
     if "error" in page_title.lower() or "error is discovered" in pre_content.lower():
         if "not found in the observatory list" in pre_content.lower():
-            return {
-                "success": False,
-                "message": f"MSU 星历服务器未收录测站代码 {observatory}，且地心回退失败，请核对测站代码",
-            }
-        return {
-            "success": False,
-            "message": (
-                f"MSU 星历服务器不支持天体代码 {satellite}，"
-                "请输入该自然卫星服务的代码，例如 5001（木卫一）；通用月球代码 301 不适用"
-            ),
-        }
+            return _error_payload(
+                f"MSU 星历服务器未收录测站代码 {observatory}，且地心回退失败，请核对测站代码",
+                f"MSU did not recognize station {observatory} and the geocentric request failed. Check the station code.",
+            )
+        return _error_payload(
+            f"MSU 星历服务器不支持天体代码 {satellite}，"
+            "请输入该自然卫星服务的代码，例如 5001（木卫一）；通用月球代码 301 不适用",
+            f"MSU does not support target code {satellite}. Use a natural satellite code such as 5001 (Io). "
+            "The general Moon code 301 is not supported.",
+        )
 
     results = parse_ephemeris(pre_content, observatory=observatory, satellite=satellite)
     if not results:
-        return {"success": False, "message": "未从星历服务器返回内容中解析到数据"}
+        return _error_payload("未从星历服务器返回内容中解析到数据", "No data could be read from the ephemeris response.")
 
     target_info = TARGET_METADATA.get(str(satellite), {
         "name": f"天体 {satellite}",
@@ -539,26 +554,27 @@ def index():
 def calculate():
     data = _get_json_object()
     if data is None:
-        return _json_error("请求体必须是 JSON 对象")
+        return _json_error("请求体必须是 JSON 对象", "The request body must be a JSON object.")
 
     satellite = str(data.get("satellite", "")).strip()
     raw_obs = str(data.get("observatory", "")).strip()
     observatory = normalize_obs_code(raw_obs)
     initmom = " ".join(str(data.get("initmom", "")).split())
     if not re.fullmatch(r"\d{1,10}", satellite):
-        return _json_error("天体代码必须是 1 到 10 位数字")
+        return _json_error("天体代码必须是 1 到 10 位数字", "The target code must contain 1 to 10 digits.")
     if not re.fullmatch(r"[A-Za-z0-9._+-]{1,32}", observatory):
-        return _json_error("观测站代码格式错误")
+        return _json_error("观测站代码格式错误", "Invalid observatory code.")
     try:
         datetime.strptime(initmom, "%Y %m %d %H %M %S")
     except ValueError:
-        return _json_error("时间格式或日期无效，请使用 YYYY MM DD HH mm ss")
+        return _json_error("时间格式或日期无效，请使用 YYYY MM DD HH mm ss",
+                           "Invalid date or time. Use YYYY MM DD HH mm ss.")
     try:
-        nde = _bounded_int(data.get("nde", 6), "历表类型", 0, 10)
-        ntimes = _bounded_int(data.get("ntimes", 1), "步数", 1, 100)
-        timestep = _bounded_float(data.get("timestep", 1), "步长", 0.001, 8760)
-    except ValueError as exc:
-        return _json_error(str(exc))
+        nde = _bounded_int(data.get("nde", 6), "历表类型", "Ephemeris model", 0, 10)
+        ntimes = _bounded_int(data.get("ntimes", 1), "步数", "Number of steps", 1, 100)
+        timestep = _bounded_float(data.get("timestep", 1), "步长", "Step size", 0.001, 8760)
+    except InputError as exc:
+        return _json_error(str(exc), exc.message_en)
 
     return jsonify(fetch_satellite_data(
         "0", satellite, str(nde), observatory, initmom, str(ntimes), f"{timestep:g}"
@@ -569,16 +585,16 @@ def calculate():
 def download_chart():
     data = _get_json_object()
     if data is None:
-        return _json_error("请求体必须是 JSON 对象")
+        return _json_error("请求体必须是 JSON 对象", "The request body must be a JSON object.")
     try:
         ra, dec = _parse_coordinates(str(data.get("ra", "")), str(data.get("dec", "")))
-        fov = _bounded_float(data.get("fov", 10), "视场", 1, 60)
-    except ValueError as exc:
-        return _json_error(str(exc))
+        fov = _bounded_float(data.get("fov", 10), "视场", "Field of view", 1, 60)
+    except InputError as exc:
+        return _json_error(str(exc), exc.message_en)
 
     result = download_dss_image(ra, dec, height=fov, width=fov)
     if result is None:
-        return _json_error("从 DSS 服务器获取图片失败", 502)
+        return _json_error("从 DSS 服务器获取图片失败", "Could not retrieve the image from DSS.", 502)
     cache_id, _ = result
 
     try:
@@ -790,16 +806,18 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
             pct = max(0, min(100, round((rem_sec / tot_sec) * 100)))
             rem_h = rem_sec / 3600.0
             if rem_h >= 1.0:
-                rem_str = f"剩 {rem_h:.1f}h"
+                remaining_time = f"{rem_h:.1f}h"
             else:
                 rem_m = max(1, round(rem_sec / 60.0))
-                rem_str = f"剩 {rem_m}m"
+                remaining_time = f"{rem_m}m"
+            rem_str = f"剩 {remaining_time}"
 
             planets_eval[p_key] = {
                 "valid": True, "status": "observing", "pct": pct,
                 "start": p_info["start"], "end": p_info["end"], "max_alt": p_info.get("max_alt", 0),
                 "alt_deg": alt_val,
                 "alt_str": alt_text,
+                "remaining_time": remaining_time,
                 "time_badge": rem_str,
                 "badge": f"{alt_prefix}{rem_str}",
                 "tooltip": f"【可观测】{alt_tip_str}距观测结束还剩 {rem_h:.1f}小时 (至 {p_info['end']} 截止，高度角>30°)，窗口总长: {p_info['start']} ~ {p_info['end']}"
