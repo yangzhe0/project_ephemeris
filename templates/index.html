@@ -303,17 +303,23 @@
 
                         <!-- 观测时间 (北京时间 +8) -->
                         <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1" data-en-text="Observation time (Beijing, UTC+8)">观测时间 (北京时间 +8)</label>
-                            <input type="text" id="localTimeInput" placeholder="留空默认当前时刻，或输入如 20261105213000" data-en-placeholder="Leave blank for current time, or enter 20261105213000"
-                                onchange="onLocalTimeChange()"
-                                onkeydown="if(event.key==='Enter'){event.preventDefault();submitCalculation();updateObservationProgress();}"
-                                class="w-full border border-gray-300 rounded-lg p-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none">
-                            <p class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                                </svg>
-                                <span data-en-text="Leave blank for the current time. Compact input such as 20261105213000 is accepted.">留空为当前时刻；支持 20261105213000 无空格连续时间直接输入</span>
-                            </p>
+                            <p class="block text-xs font-medium text-gray-700 mb-1" data-en-text="Observation time (Beijing, UTC+8)">观测时间 (北京时间 +8)</p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="min-w-0">
+                                    <label for="observationDate" class="sr-only" data-en-text="Observation date">观测日期</label>
+                                    <input type="date" id="observationDate" required max="9999-12-31"
+                                        onclick="openObservationPicker(this)" onchange="onLocalTimeChange()"
+                                        class="min-w-0 w-full border border-gray-300 rounded-lg p-2 font-mono text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                                <div class="min-w-0">
+                                    <label for="observationTime" class="sr-only" data-en-text="Observation time">观测时刻</label>
+                                    <input type="time" id="observationTime" value="21:00" required step="1"
+                                        onclick="openObservationPicker(this)" onchange="onLocalTimeChange()"
+                                        class="min-w-0 w-full border border-gray-300 rounded-lg p-2 font-mono text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <input type="hidden" id="localTimeInput">
+                            <p class="text-[10px] text-gray-400 mt-1" data-en-text="Choose a date to calculate automatically. Time defaults to 21:00 and can be adjusted.">选择日期即自动计算，时间默认 21:00，可单独调整</p>
                         </div>
 
                         <!-- 观测站 -->
@@ -570,15 +576,39 @@
             const initmom = `${utcDate.getUTCFullYear()} ${pad(utcDate.getUTCMonth() + 1)} ${pad(utcDate.getUTCDate())} ${pad(utcDate.getUTCHours())} ${pad(utcDate.getUTCMinutes())} ${pad(utcDate.getUTCSeconds())}`;
             const bjtIso = `${Y}-${pad(M + 1)}-${pad(D)} ${pad(h)}:${pad(m)}:${pad(sec)}`;
 
-            return { initmom, bjtIso, error: null };
+            return { initmom, bjtIso, utcDate, error: null };
         }
 
+        function openObservationPicker(input) {
+            try {
+                input.showPicker?.();
+            } catch {
+                // The native field remains available through keyboard or touch.
+            }
+        }
+
+        function syncObservationTime() {
+            const date = document.getElementById('observationDate');
+            const time = document.getElementById('observationTime');
+            const valid = date.validity.valid && time.validity.valid;
+            document.getElementById('localTimeInput').value = valid ? date.value + 'T' + time.value : '';
+            return valid;
+        }
+
+        let timeChangeTimer;
         function onLocalTimeChange() {
-            updateObservationProgress();
+            clearTimeout(timeChangeTimer);
+            if (!syncObservationTime()) return;
+            timeChangeTimer = setTimeout(() => {
+                updateObservationProgress();
+                submitCalculation();
+            }, 350);
         }
 
         // --- 观测时间窗口与实时高度角刷新 (纯后台异步拉取，绝不阻塞当前星出图) ---
         async function updateObservationProgress() {
+            if (!syncObservationTime()) return;
+            const requestId = ++observationRequestId;
             const obs = document.getElementById('observatory').value || '286';
             const localInput = document.getElementById('localTimeInput').value.trim();
 
@@ -593,6 +623,8 @@
             try {
                 const res = await fetch(url);
                 const data = await res.json();
+                if (requestId !== observationRequestId ||
+                    localInput !== document.getElementById('localTimeInput').value) return;
                 if (!data || !data.success) return;
 
                 // 同步当前测站元数据（保证切换任意台站时均可实时感知坐标与海拔）
@@ -783,6 +815,9 @@
 
         // 页面初始化：按导师要求先查当前天体出证认图，后台异步拉取其他天体的高度角与倒计时，互不拉垮时间
         document.addEventListener('DOMContentLoaded', () => {
+            const beijingDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            document.getElementById('observationDate').value = beijingDate;
+            syncObservationTime();
             localizePage();
             refreshLocalizedResults();
             // 1. 优先异步拉取所有天体的实时高度角与暗夜窗口（毫秒级点亮顶栏与磁贴徽标）
@@ -801,6 +836,9 @@
         let currentPreviewFilename = null;
         let observationStatus = null;
         let calculationError = null;
+        let observationRequestId = 0;
+        let calculationRequestId = 0;
+        let previewRequestId = 0;
 
         function refreshLocalizedResults() {
             updateCalculateLabel();
@@ -852,6 +890,12 @@
 
         // 提交计算
         async function submitCalculation() {
+            clearTimeout(timeChangeTimer);
+            if (!syncObservationTime()) {
+                const invalidInput = document.querySelector('#observationDate:invalid, #observationTime:invalid');
+                invalidInput.reportValidity();
+                return;
+            }
             const btn = document.getElementById('submitBtn');
             const loader = document.getElementById('btnLoader');
             const resultArea = document.getElementById('resultArea');
@@ -886,23 +930,14 @@
                 return;
             }
 
-            // 处理时间: 支持 20261105213000 无空格连续时间或标准空格格式，转 UTC 供后端星历使用
-            let initmom = '';
+            // 将选定的北京时间转换为 UTC。
             const localInput = document.getElementById('localTimeInput').value.trim();
-
-            if (localInput) {
-                const parsed = parseLocalObservationTime(localInput);
-                if (parsed.error) {
-                    alert(parsed.error);
-                    return;
-                }
-                initmom = parsed.initmom;
-            } else {
-                // 留空则使用当前瞬时 UTC 时间
-                const now = new Date();
-                const pad = n => n.toString().padStart(2, '0');
-                initmom = `${now.getUTCFullYear()} ${pad(now.getUTCMonth() + 1)} ${pad(now.getUTCDate())} ${pad(now.getUTCHours())} ${pad(now.getUTCMinutes())} ${pad(now.getUTCSeconds())}`;
+            const parsed = parseLocalObservationTime(localInput);
+            if (parsed.error) {
+                alert(parsed.error);
+                return;
             }
+            const initmom = parsed.initmom;
 
             // UI 更新
             btn.disabled = true;
@@ -924,6 +959,7 @@
                 ntimes: document.getElementById('ntimes').value,
                 timestep: document.getElementById('timestep').value
             };
+            const requestId = ++calculationRequestId;
 
             try {
                 const response = await fetch('/api/calculate', {
@@ -933,6 +969,8 @@
                 });
 
                 const result = await response.json();
+                if (requestId !== calculationRequestId ||
+                    localInput !== document.getElementById('localTimeInput').value) return;
 
                 if (result.success) {
                     currentResults = result.data;
@@ -946,19 +984,27 @@
                     // 自动预览第一条结果
                     if (result.data.length > 0) {
                         setTimeout(() => {
-                            handlePreviewDSS(0, satellite);
+                            if (requestId === calculationRequestId &&
+                                localInput === document.getElementById('localTimeInput').value) {
+                                handlePreviewDSS(0, satellite);
+                            }
                         }, 300);
                     }
                 } else {
                     showError(result.message || '未知错误', result.message_en || 'An unexpected error occurred.');
                 }
             } catch (err) {
-                showError('请求失败: ' + err.message, 'Request failed: ' + err.message);
+                if (requestId === calculationRequestId &&
+                    localInput === document.getElementById('localTimeInput').value) {
+                    showError('请求失败: ' + err.message, 'Request failed: ' + err.message);
+                }
             } finally {
-                btn.disabled = false;
-                btn.classList.remove('opacity-75', 'cursor-not-allowed');
-                loader.style.display = 'none';
-                updateCalculateLabel();
+                if (requestId === calculationRequestId) {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    loader.style.display = 'none';
+                    updateCalculateLabel();
+                }
             }
         }
 
@@ -1165,6 +1211,9 @@
             const fov = document.getElementById('fov').value || 10;
             const item = currentResults[index];
             if (!item) return;
+            const requestId = ++previewRequestId;
+            const calculationId = calculationRequestId;
+            const localInput = document.getElementById('localTimeInput').value;
 
             currentPreviewItem = item;
 
@@ -1227,6 +1276,8 @@
                 });
 
                 const result = await response.json();
+                if (requestId !== previewRequestId || calculationId !== calculationRequestId ||
+                    localInput !== document.getElementById('localTimeInput').value) return;
 
                 if (result.success) {
                     // 成功：显示图片
@@ -1254,7 +1305,10 @@
                     showPreviewError(result.message, result.message_en);
                 }
             } catch (err) {
-                showPreviewError(err.message, err.message);
+                if (requestId === previewRequestId && calculationId === calculationRequestId &&
+                    localInput === document.getElementById('localTimeInput').value) {
+                    showPreviewError(err.message, err.message);
+                }
             }
         }
 
@@ -1495,8 +1549,8 @@
                 <div>
                     <h4 class="font-bold text-gray-900 text-base mb-2">3. 观测时间</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>当前瞬时时间</strong>：输入框留空时，系统默认按当前瞬时时间计算。</li>
-                        <li><strong>指定观测时刻</strong>：支持直接输入<strong>北京时间 (UTC+8)</strong>，格式为 <code>YYYY MM DD HH mm ss</code>（如 <code>2026 11 05 21 30 00</code>），系统会自动减去 8 小时转换为国际 UTC 标准时参与星历运算。</li>
+                        <li><strong>指定观测日期</strong>：点击日期打开日历，选择需要观测的日期即自动更新星历、暗夜窗口和寻星图。</li>
+                        <li><strong>观测时刻</strong>：默认使用所选日期的 <strong>21:00</strong>，可在旁边单独调整。日期和时间均为<strong>北京时间 (UTC+8)</strong>，系统自动转换为 UTC 参与星历运算。</li>
                     </ul>
                 </div>
 
