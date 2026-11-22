@@ -550,6 +550,86 @@ def index():
     return render_template("index.html", satellites=SATELLITES, default_satellite="8001")
 
 
+@app.route("/planner")
+def planner():
+    from planner_data import PLANNER_TARGETS, STATION_PROFILES
+
+    bjt_now = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Shanghai"))
+    default_start = bjt_now.date().isoformat()
+    default_end = (bjt_now.date() + timedelta(days=2)).isoformat()
+    return render_template(
+        "planner.html",
+        targets=PLANNER_TARGETS,
+        stations=list(STATION_PROFILES.values()),
+        default_start=default_start,
+        default_end=default_end,
+    )
+
+
+@app.route("/api/planner/windows", methods=["POST"])
+def planner_windows():
+    from planner_engine import compute_planner_nights
+
+    data = _get_json_object()
+    if data is None:
+        return _json_error("请求体必须是 JSON 对象", "The request body must be a JSON object.")
+
+    raw_obs = str(data.get("observatory", "286")).strip()
+    obs_code = normalize_obs_code(raw_obs)
+    start_date = str(data.get("start_date", "")).strip()
+    end_date = str(data.get("end_date", "")).strip()
+    target_ids = data.get("targets")
+    if not isinstance(target_ids, list):
+        return _json_error("targets 必须是目标列表", "targets must be a list of target IDs.")
+
+    try:
+        min_alt = _bounded_float(data.get("min_alt", 30), "最低高度角", "Minimum altitude", 5, 80)
+        result = compute_planner_nights(
+            obs_code=obs_code,
+            start_date_str=start_date,
+            end_date_str=end_date,
+            target_ids=[str(t) for t in target_ids],
+            min_alt=min_alt,
+            station_lookup=get_observatory,
+        )
+    except InputError as exc:
+        return _json_error(str(exc), exc.message_en)
+    except ValueError as exc:
+        return _json_error(str(exc), str(exc))
+    except Exception as exc:
+        return _json_error(f"排程计算失败：{exc}", f"Planner computation failed: {exc}", status=500)
+
+    return jsonify(result)
+
+
+@app.route("/api/planner/export", methods=["POST"])
+def planner_export():
+    from planner_engine import generate_outline_docx
+
+    data = _get_json_object()
+    if data is None:
+        return _json_error("请求体必须是 JSON 对象", "The request body must be a JSON object.")
+
+    try:
+        buf = generate_outline_docx(data)
+    except Exception as exc:
+        return _json_error(f"生成 Word 纲要失败：{exc}", f"Failed to export Word outline: {exc}", status=500)
+
+    station = data.get("station") or {}
+    short_name = _safe_download_name(str(station.get("short_name") or station.get("code") or "Station"))
+    start_date = _safe_download_name(str(data.get("start_date") or "outline"))
+    end_date = _safe_download_name(str(data.get("end_date") or ""))
+    date_part = start_date if (not end_date or start_date == end_date) else f"{start_date}_{end_date}"
+    filename = f"{date_part}_{short_name}_观测纲要.docx"
+
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
 @app.route("/api/calculate", methods=["POST"])
 def calculate():
     data = _get_json_object()

@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>观测纲要与多夜排程工作台 · 天文卫星星历工具</title>
+    <link rel="icon" href="/favicon.png" type="image/jpeg">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <script src="/static/tailwind.min.js" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com';"></script>
+    <style>
+        .timeline-block {
+            user-select: none;
+            touch-action: none;
+        }
+        .resize-handle {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            cursor: ew-resize;
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .resize-handle::after {
+            content: "";
+            width: 2px;
+            height: 18px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.75);
+        }
+        .resize-handle-left {
+            left: 0;
+            border-top-left-radius: 6px;
+            border-bottom-left-radius: 6px;
+        }
+        .resize-handle-right {
+            right: 0;
+            border-top-right-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+        .resize-handle:hover {
+            background: rgba(15, 23, 42, 0.22);
+        }
+        .block-out-of-window {
+            outline: 2.5px solid #ef4444 !important;
+            outline-offset: -1px;
+            background-image: repeating-linear-gradient(
+                -45deg,
+                rgba(239, 68, 68, 0.28),
+                rgba(239, 68, 68, 0.28) 6px,
+                transparent 6px,
+                transparent 12px
+            );
+        }
+        .loader-sm {
+            border: 2.5px solid #e5e7eb;
+            border-top: 2.5px solid #2563eb;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 0.9s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        @media print {
+            body { background: #fff !important; }
+            .no-print { display: none !important; }
+            .print-sheet {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .print-page-break {
+                page-break-before: always;
+                break-before: page;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- 顶部导航栏 -->
+    <header class="bg-white shadow-2xs border-b border-gray-200 sticky top-0 z-30 no-print">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <a href="/" class="bg-blue-600 text-white p-1.5 sm:p-2 rounded-lg flex-shrink-0 shadow-2xs hover:bg-blue-700 transition" title="返回星历与寻星图首页">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.5 6.5l8 4.6a1 1 0 01.37 1.37l-1 1.73a1 1 0 01-1.37.37l-8-4.6" />
+                        <path d="M18.87 11.1l2.6 1.5" />
+                        <path d="M7 4.5l3.5 2" />
+                        <path d="M12 13v8" />
+                        <path d="M12 13l-5 8" />
+                        <path d="M12 13l5 8" />
+                    </svg>
+                </a>
+                <div class="min-w-0">
+                    <h1 class="text-sm sm:text-lg font-bold text-gray-800 truncate leading-tight">
+                        观测纲要与多夜排程工作台
+                    </h1>
+                    <p class="text-[11px] text-gray-500 truncate leading-none mt-0.5">
+                        甘特图窗口约束 · 滑块自由排程 · 科研级 Word/PDF 导出
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <a href="/"
+                    class="px-2.5 py-1.5 text-xs sm:text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition">
+                    ← 返回星历页
+                </a>
+                <button type="button" onclick="window.print()"
+                    class="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg transition">
+                    打印 / PDF
+                </button>
+                <button type="button" id="exportDocxBtn" onclick="exportDocx()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs transition disabled:opacity-50">
+                    <span>导出 Word (.docx)</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 space-y-4">
+
+        <!-- 1. 参数配置卡片 -->
+        <section class="bg-white rounded-xl shadow-xs border border-gray-200 p-4 no-print">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-gray-100">
+                <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                    1. 设定测站、日期与观测目标
+                </h2>
+                <span id="statusBanner" class="text-xs text-gray-500">修改配置后点击右侧按钮重新解算窗口</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <!-- 测站选择 -->
+                <div class="md:col-span-4 space-y-1.5">
+                    <label class="block text-xs font-semibold text-gray-600">观测台站（MPC 代码）</label>
+                    <div class="flex flex-wrap gap-1.5">
+                        {% for st in stations %}
+                        {% if st.code != '500' %}
+                        <button type="button"
+                            onclick="selectStation('{{ st.code }}')"
+                            data-station-btn="{{ st.code }}"
+                            class="station-btn px-2.5 py-1 text-xs rounded-md border border-gray-200 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 transition font-medium">
+                            {{ st.short_name }} ({{ st.code }})
+                        </button>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <input id="obsInput" type="text" value="286" maxlength="16"
+                            class="w-28 px-2.5 py-1.5 text-xs font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="如 286">
+                        <span id="stationNameHint" class="text-xs text-gray-500 truncate">云南天文台昆明1米望远镜</span>
+                    </div>
+                </div>
+
+                <!-- 起止日期与最低高度角 -->
+                <div class="md:col-span-4 grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">开始观测夜</label>
+                        <input id="startDate" type="date" value="{{ default_start }}"
+                            class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">结束观测夜</label>
+                        <input id="endDate" type="date" value="{{ default_end }}"
+                            class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="col-span-2 flex items-center gap-3 pt-1">
+                        <label class="text-xs font-semibold text-gray-600 whitespace-nowrap">最低高度角阈值</label>
+                        <input id="minAltInput" type="range" min="15" max="55" step="5" value="30"
+                            oninput="document.getElementById('minAltVal').textContent = this.value + '°'"
+                            class="flex-1 accent-blue-600">
+                        <span id="minAltVal" class="text-xs font-mono font-bold text-blue-700 w-9 text-right">30°</span>
+                    </div>
+                </div>
+
+                <!-- 人员与备注 -->
+                <div class="md:col-span-4 grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">观测人员</label>
+                        <input id="observerInput" type="text" value="" placeholder="如 杨哲"
+                            oninput="renderPreview()"
+                            class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">观测助手</label>
+                        <input id="assistantInput" type="text" value="" placeholder="如 张恒"
+                            oninput="renderPreview()"
+                            class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="col-span-2">
+                        <input id="customNoteInput" type="text" value="" placeholder="可选：整轮观测特别备注（将写入纲要封面与表头）"
+                            oninput="renderPreview()"
+                            class="w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 目标多选区 -->
+            <div class="mt-3 pt-3 border-t border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-1.5" id="targetSelector">
+                    <span class="text-xs font-semibold text-gray-600 mr-1">观测目标：</span>
+                    {% for t in targets %}
+                    <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs cursor-pointer select-none transition bg-white hover:bg-gray-50 border-gray-200">
+                        <input type="checkbox" class="target-cb accent-blue-600" value="{{ t.id }}"
+                            {% if t.default_selected %}checked{% endif %}>
+                        <span class="w-2 h-2 rounded-full flex-shrink-0" style="background: {{ t.color }}"></span>
+                        <span class="font-medium text-gray-700">{{ t.short }}</span>
+                        <span class="text-[10px] text-gray-400">{{ t.planet_zh }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                <div class="flex items-center gap-3 flex-shrink-0">
+                    <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
+                        <input id="includeChecklistCb" type="checkbox" checked onchange="renderPreview()" class="accent-blue-600">
+                        <span>附带一线实操速查</span>
+                    </label>
+                    <button type="button" id="computeBtn" onclick="fetchPlannerWindows()"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition">
+                        <span id="computeSpinner" class="loader-sm hidden"></span>
+                        <span>解算窗口并生成排程</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 甘特图 + 单轨拼接滑块排程工作台 -->
+        <section id="workspaceSection" class="bg-white rounded-xl shadow-xs border border-gray-200 p-4 space-y-4 no-print">
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100">
+                <div>
+                    <h2 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+                        2. 交互式时间排程工作台（甘特图约束 + 拼接滑块条）
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        拖动色块左右边缘可自由缩扩并留出空白（如前半夜留出 1 小时），拖动色块中间可整体平移；拖出上方有效窗口会实时标红预警。
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="syncCurrentNightToAll()"
+                        class="px-2.5 py-1.5 text-xs font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg transition"
+                        title="把当前晚的排程比例、留白与顺序按各晚窗口自动平移应用到其他夜晚">
+                        同步当前晚至其余夜晚
+                    </button>
+                    <button type="button" onclick="insertBufferBlock()"
+                        class="px-2.5 py-1.5 text-xs font-medium bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg transition">
+                        + 插入机动/留白块
+                    </button>
+                    <button type="button" onclick="resetCurrentNight()"
+                        class="px-2.5 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition">
+                        重置为智能均分
+                    </button>
+                </div>
+            </div>
+
+            <!-- 多晚日期切换条 -->
+            <div id="nightTabs" class="flex items-center gap-2 overflow-x-auto pb-1"></div>
+
+            <!-- 当晚天象摘要条 -->
+            <div id="nightSummaryBar" class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700"></div>
+
+            <!-- 上下联动的甘特图与单轨拼接滑块 -->
+            <div class="overflow-x-auto">
+                <div class="min-w-[720px] space-y-3">
+                    <!-- 共享时间刻度尺 -->
+                    <div class="grid grid-cols-[136px_1fr] items-end gap-2">
+                        <div class="text-[11px] font-semibold text-gray-500 text-right pr-2">时间轴 (BJT)</div>
+                        <div id="timeAxisRuler" class="relative h-6 border-b border-gray-300"></div>
+                    </div>
+
+                    <!-- 上层：只读可观测窗口甘特图 -->
+                    <div class="space-y-1.5">
+                        <div class="grid grid-cols-[136px_1fr] items-center gap-2">
+                            <div class="text-[11px] font-bold text-gray-600 text-right pr-2">可观测窗口</div>
+                            <div class="flex items-center gap-3 text-[11px] text-gray-500">
+                                <span class="inline-flex items-center gap-1"><span class="w-3 h-2 rounded-xs bg-indigo-100 border border-indigo-200 inline-block"></span>天文暗夜 (-18°)</span>
+                                <span class="inline-flex items-center gap-1"><span class="w-3 h-2 rounded-xs bg-amber-200/80 inline-block"></span>暗夜月光</span>
+                                <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rotate-45 bg-red-500 inline-block"></span>中天最高点</span>
+                            </div>
+                        </div>
+                        <div id="ganttRows" class="space-y-1.5"></div>
+                    </div>
+
+                    <!-- 下层：可拖拽单轨拼接滑块条 -->
+                    <div class="pt-2 border-t border-dashed border-gray-200">
+                        <div class="grid grid-cols-[136px_1fr] items-center gap-2">
+                            <div class="text-right pr-2">
+                                <div class="text-xs font-bold text-indigo-700">实际排程条</div>
+                                <div id="scheduledTotalLabel" class="text-[10px] text-gray-500 font-mono">已排 0h</div>
+                            </div>
+                            <div id="sliderTrack"
+                                class="relative h-14 rounded-lg bg-slate-100 border-2 border-slate-300 overflow-hidden shadow-inner">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 当晚排程微调列表 -->
+            <div class="pt-2 border-t border-gray-100">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-bold text-gray-700">当晚排程明细与精准微调</span>
+                    <span id="warningCounter" class="text-xs font-medium text-emerald-600">全部时段均在有效高度角窗口内</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 border-y border-gray-200">
+                                <th class="py-1.5 px-2 text-left w-10">#</th>
+                                <th class="py-1.5 px-2 text-left">目标 / 事项</th>
+                                <th class="py-1.5 px-2 text-center">起止时刻 (BJT)</th>
+                                <th class="py-1.5 px-2 text-center">时长</th>
+                                <th class="py-1.5 px-2 text-center">时段高度角</th>
+                                <th class="py-1.5 px-2 text-left">单条备注</th>
+                                <th class="py-1.5 px-2 text-right">微调</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduleTableBody" class="divide-y divide-gray-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 完整观测纲要实时预览（同时用于打印/PDF） -->
+        <section id="previewSheet" class="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-8 print-sheet space-y-6">
+            <div class="text-center text-sm text-gray-400 py-8">正在加载观测纲要预览...</div>
+        </section>
+
+    </main>
+
+    <script>
+        const SAMPLE_STEP = 5;
+        let plannerData = null;
+        let activeNightIdx = 0;
+        let defaultSchedulesBackup = [];
+        let customizedNights = new Set();
+
+        function offsetToHHMM(offsetMin) {
+            if (offsetMin == null || Number.isNaN(offsetMin)) return '--:--';
+            const total = Math.round(offsetMin);
+            const clock = ((12 * 60 + total) % (24 * 60) + (24 * 60)) % (24 * 60);
+            const hh = String(Math.floor(clock / 60)).padStart(2, '0');
+            const mm = String(clock % 60).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+
+        function formatDur(minutes) {
+            const mTotal = Math.max(0, Math.round(minutes));
+            const h = Math.floor(mTotal / 60);
+            const m = mTotal % 60;
+            if (h && m) return `${h}h ${m}m`;
+            if (h) return `${h}h`;
+            return `${m}m`;
+        }
+
+        function snap5(val) {
+            return Math.round(val / SAMPLE_STEP) * SAMPLE_STEP;
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function selectStation(code) {
+            document.getElementById('obsInput').value = code;
+            highlightStationBtn(code);
+            fetchPlannerWindows();
+        }
+
+        function highlightStationBtn(code) {
+            document.querySelectorAll('.station-btn').forEach(btn => {
+                const active = btn.dataset.stationBtn === code;
+                btn.classList.toggle('bg-blue-600', active);
+                btn.classList.toggle('text-white', active);
+                btn.classList.toggle('border-blue-600', active);
+                btn.classList.toggle('bg-gray-50', !active);
+                btn.classList.toggle('text-gray-700', !active);
+            });
+        }
+
+        function evaluateBlockAltitude(night, block) {
+            if (block.kind === 'buffer') {
+                return { altSummary: '--', outOfWindow: false, minAltInBlock: null };
+            }
+            const planet = night.planets[block.planet];
+            if (!planet || !Array.isArray(planet.alt_samples) || planet.alt_samples.length === 0) {
+                return { altSummary: '--', outOfWindow: false, minAltInBlock: null };
+            }
+            const samples = planet.alt_samples;
+            const iStart = Math.max(0, Math.min(samples.length - 1, Math.round(block.start_min / SAMPLE_STEP)));
+            const iEnd = Math.max(iStart, Math.min(samples.length - 1, Math.round(block.end_min / SAMPLE_STEP)));
+            let minA = Infinity;
+            let maxA = -Infinity;
+            for (let i = iStart; i <= iEnd; i++) {
+                const a = samples[i];
+                if (a < minA) minA = a;
+                if (a > maxA) maxA = a;
+            }
+            const startA = samples[iStart];
+            const endA = samples[iEnd];
+            const threshold = plannerData ? plannerData.min_alt : 30;
+            const outOfWindow = minA < threshold - 0.1;
+            const altSummary = `${Math.round(startA)}° → ${Math.round(endA)}° (最高 ${Math.round(maxA)}°)`;
+            return { altSummary, outOfWindow, minAltInBlock: minA };
+        }
+
+        function enrichBlock(night, blk) {
+            blk.start_time = offsetToHHMM(blk.start_min);
+            blk.end_time = offsetToHHMM(blk.end_min);
+            blk.duration_min = Math.max(0, blk.end_min - blk.start_min);
+            const ev = evaluateBlockAltitude(night, blk);
+            blk.alt_summary = ev.altSummary;
+            blk.out_of_window = ev.outOfWindow;
+            blk.min_alt_in_block = ev.minAltInBlock;
+            return blk;
+        }
+
+        function getSelectedTargets() {
+            return Array.from(document.querySelectorAll('.target-cb:checked')).map(el => el.value);
+        }
+
+        async function fetchPlannerWindows() {
+            const targets = getSelectedTargets();
+            if (targets.length === 0) {
+                alert('请至少选择一个观测目标');
+                return;
+            }
+            const obs = document.getElementById('obsInput').value.trim() || '286';
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const minAlt = Number(document.getElementById('minAltInput').value || 30);
+
+            const btn = document.getElementById('computeBtn');
+            const spinner = document.getElementById('computeSpinner');
+            const banner = document.getElementById('statusBanner');
+            btn.disabled = true;
+            spinner.classList.remove('hidden');
+            banner.textContent = '正在用 Astropy 解算逐夜晨昏、月相与行星窗口...';
+
+            try {
+                const resp = await fetch('/api/planner/windows', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        observatory: obs,
+                        start_date: startDate,
+                        end_date: endDate,
+                        targets,
+                        min_alt: minAlt,
+                    }),
+                });
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    throw new Error(data.message || '排程解算失败');
+                }
+                plannerData = data;
+                activeNightIdx = 0;
+                customizedNights = new Set();
+                plannerData.nights.forEach(n => n.schedule.forEach(b => enrichBlock(n, b)));
+                defaultSchedulesBackup = plannerData.nights.map(n => JSON.parse(JSON.stringify(n.schedule)));
+
+                document.getElementById('stationNameHint').textContent = `${data.station.name} (${data.station.code})`;
+                highlightStationBtn(data.station.code);
+                banner.textContent = `已解算 ${data.nights.length} 晚天象窗口并自动均分排程`;
+                renderAll();
+            } catch (err) {
+                banner.textContent = `错误：${err.message}`;
+                alert(err.message);
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add('hidden');
+            }
+        }
+
+        function renderAll() {
+            if (!plannerData || !plannerData.nights.length) return;
+            renderNightTabs();
+            renderWorkspace();
+            renderPreview();
+        }
+
+        function renderNightTabs() {
+            const container = document.getElementById('nightTabs');
+            container.innerHTML = plannerData.nights.map((n, idx) => {
+                const active = idx === activeNightIdx;
+                const isCustom = customizedNights.has(idx);
+                return `
+                    <button type="button" onclick="switchNight(${idx})"
+                        class="flex-shrink-0 px-3 py-1.5 rounded-lg border text-xs transition flex items-center gap-1.5 ${
+                            active
+                                ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-semibold'
+                                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                        }">
+                        <span>${escapeHtml(n.date)}</span>
+                        <span class="opacity-80">${escapeHtml(n.weekday)}</span>
+                        ${isCustom ? `<span class="w-1.5 h-1.5 rounded-full ${active ? 'bg-amber-300' : 'bg-blue-500'}" title="已手动微调"></span>` : ''}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function switchNight(idx) {
+            activeNightIdx = idx;
+            renderNightTabs();
+            renderWorkspace();
+        }
+
+        function renderWorkspace() {
+            const night = plannerData.nights[activeNightIdx];
+            const tw = night.twilight;
+            const moon = night.moon;
+            const spanMin = Math.max(60, tw.dawn_min - tw.dusk_min);
+
+            const toPct = (m) => ((m - tw.dusk_min) / spanMin) * 100;
+            const clampPct = (p) => Math.max(0, Math.min(100, p));
+
+            // 1. Summary Bar
+            document.getElementById('nightSummaryBar').innerHTML = `
+                <span><strong>${escapeHtml(night.date)} (${escapeHtml(night.weekday)})</strong></span>
+                <span>航海暗夜 (-12°)：<strong class="font-mono text-blue-700">${tw.dusk} ~ ${tw.dawn}</strong> (${formatDur(tw.dark_duration_min)})</span>
+                <span>天文暗夜 (-18°)：<strong class="font-mono">${tw.astro_dusk} ~ ${tw.astro_dawn}</strong></span>
+                <span>月相：<strong>${moon.illum_pct}%</strong>${moon.in_night ? ` · 月光 ${moon.night_start}~${moon.night_end}` : ' · 暗夜无月'}</span>
+            `;
+
+            // 2. Time Axis Ruler
+            const ruler = document.getElementById('timeAxisRuler');
+            const firstHour = Math.ceil(tw.dusk_min / 60) * 60;
+            let rulerHtml = '';
+            for (let m = firstHour; m <= tw.dawn_min; m += 60) {
+                const left = toPct(m);
+                rulerHtml += `
+                    <div class="absolute bottom-0 flex flex-col items-center -translate-x-1/2" style="left:${left}%">
+                        <span class="text-[10px] font-mono text-gray-500 mb-0.5">${offsetToHHMM(m)}</span>
+                        <span class="w-px h-1.5 bg-gray-400"></span>
+                    </div>
+                `;
+            }
+            ruler.innerHTML = rulerHtml;
+
+            // Background layers helper (astro dark + moonlight)
+            const astroLeft = clampPct(toPct(tw.astro_dusk_min));
+            const astroWidth = Math.max(0, clampPct(toPct(tw.astro_dawn_min)) - astroLeft);
+            const moonHtml = moon.in_night && moon.night_start_min != null && moon.night_end_min != null
+                ? `<div class="absolute top-0 h-1.5 bg-amber-300/80 pointer-events-none" style="left:${clampPct(toPct(moon.night_start_min))}%;width:${Math.max(0, clampPct(toPct(moon.night_end_min)) - clampPct(toPct(moon.night_start_min)))}%" title="暗夜月光时段 ${moon.night_start}~${moon.night_end}"></div>`
+                : '';
+
+            // 3. Gantt Rows (read-only valid windows)
+            const ganttEl = document.getElementById('ganttRows');
+            ganttEl.innerHTML = night.target_windows.map(twItem => {
+                let barHtml = '';
+                if (twItem.valid && twItem.win_start != null && twItem.win_end != null) {
+                    const left = clampPct(toPct(twItem.win_start));
+                    const right = clampPct(toPct(twItem.win_end));
+                    const width = Math.max(1, right - left);
+                    const transitPct = toPct(twItem.transit_min);
+                    const transitMarker = (transitPct >= 0 && transitPct <= 100)
+                        ? `<div class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rotate-45 bg-red-500 border border-white shadow-xs" style="left:${transitPct}%" title="中天 ${twItem.transit_time} (${twItem.max_alt}°)"></div>`
+                        : '';
+                    barHtml = `
+                        <div class="absolute top-1 bottom-1 rounded-md opacity-85 flex items-center justify-between px-2 text-[10px] text-white font-mono overflow-hidden"
+                            style="left:${left}%;width:${width}%;background:${twItem.color}"
+                            title="${escapeHtml(twItem.name)} 有效窗口 ${twItem.win_start_time}~${twItem.win_end_time}，中天 ${twItem.transit_time} (${twItem.max_alt}°)">
+                            <span>${twItem.win_start_time}</span>
+                            <span class="truncate mx-1 font-sans">${twItem.max_alt}°${twItem.zenith_warning ? ' ⚠近天顶' : ''}</span>
+                            <span>${twItem.win_end_time}</span>
+                        </div>
+                        ${transitMarker}
+                    `;
+                } else {
+                    barHtml = `<div class="absolute inset-0 flex items-center justify-center text-[11px] text-gray-400">当晚无 ≥${plannerData.min_alt}° 有效窗口</div>`;
+                }
+                return `
+                    <div class="grid grid-cols-[136px_1fr] items-center gap-2">
+                        <div class="text-right pr-2 truncate">
+                            <span class="text-xs font-semibold text-gray-700">${escapeHtml(twItem.short)}</span>
+                            <span class="text-[10px] text-gray-400 ml-1">${escapeHtml(twItem.planet_zh)}</span>
+                        </div>
+                        <div class="relative h-7 rounded-md bg-slate-100 border border-slate-200 overflow-hidden">
+                            <div class="absolute inset-y-0 bg-indigo-50/80 pointer-events-none" style="left:${astroLeft}%;width:${astroWidth}%"></div>
+                            ${moonHtml}
+                            ${barHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // 4. Interactive Single-Track Slider Bar
+            renderSliderTrack(night, toPct, clampPct);
+            renderScheduleTable(night);
+        }
+
+        function renderSliderTrack(night, toPct, clampPct) {
+            const track = document.getElementById('sliderTrack');
+            const tw = night.twilight;
+            const blocks = night.schedule;
+            blocks.sort((a, b) => a.start_min - b.start_min);
+            blocks.forEach(b => enrichBlock(night, b));
+
+            // Render free gaps labels
+            let html = '';
+            let cursor = tw.dusk_min;
+            const gaps = [];
+            blocks.forEach(b => {
+                if (b.start_min > cursor + 5) {
+                    gaps.push({ start: cursor, end: b.start_min });
+                }
+                cursor = Math.max(cursor, b.end_min);
+            });
+            if (tw.dawn_min > cursor + 5) {
+                gaps.push({ start: cursor, end: tw.dawn_min });
+            }
+            gaps.forEach(g => {
+                const left = clampPct(toPct(g.start));
+                const width = Math.max(0, clampPct(toPct(g.end)) - left);
+                if (width >= 4) {
+                    html += `
+                        <div class="absolute inset-y-0 flex items-center justify-center text-[10px] text-slate-400 font-mono pointer-events-none select-none"
+                            style="left:${left}%;width:${width}%">
+                            <span>留白 ${formatDur(g.end - g.start)}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            // Render blocks
+            blocks.forEach((b, idx) => {
+                const left = clampPct(toPct(b.start_min));
+                const right = clampPct(toPct(b.end_min));
+                const width = Math.max(1.5, right - left);
+                const isBuffer = b.kind === 'buffer';
+                const bg = isBuffer ? '#64748b' : (b.color || '#2563eb');
+                const warnClass = b.out_of_window ? 'block-out-of-window' : '';
+                html += `
+                    <div class="timeline-block absolute top-1 bottom-1 rounded-md text-white shadow-xs flex flex-col items-center justify-center px-2 overflow-hidden cursor-grab active:cursor-grabbing ${warnClass}"
+                        style="left:${left}%;width:${width}%;background-color:${bg}"
+                        data-block-idx="${idx}"
+                        onpointerdown="startBlockDrag(event, ${idx}, 'move')"
+                        title="${escapeHtml(b.label)} · ${b.start_time}~${b.end_time} (${formatDur(b.duration_min)}) · ${b.alt_summary}${b.out_of_window ? ' · 越界预警！' : ''}">
+                        <div class="resize-handle resize-handle-left" onpointerdown="startBlockDrag(event, ${idx}, 'left')"></div>
+                        <div class="text-xs font-bold leading-tight truncate max-w-full pointer-events-none">
+                            ${isBuffer ? '机动/留白' : escapeHtml(b.label)}${b.out_of_window ? ' ⚠' : ''}
+                        </div>
+                        <div class="text-[10px] font-mono opacity-90 leading-tight truncate max-w-full pointer-events-none">
+                            ${b.start_time}-${b.end_time} (${formatDur(b.duration_min)})
+                        </div>
+                        <div class="resize-handle resize-handle-right" onpointerdown="startBlockDrag(event, ${idx}, 'right')"></div>
+                    </div>
+                `;
+            });
+
+            track.innerHTML = html;
+
+            const totalTargetMin = blocks.filter(b => b.kind !== 'buffer').reduce((s, b) => s + b.duration_min, 0);
+            document.getElementById('scheduledTotalLabel').textContent = `观测 ${formatDur(totalTargetMin)}`;
+        }
+
+        // Dragging state machine
+        function startBlockDrag(event, blockIdx, mode) {
+            event.stopPropagation();
+            event.preventDefault();
+            const night = plannerData.nights[activeNightIdx];
+            const tw = night.twilight;
+            const track = document.getElementById('sliderTrack');
+            const rect = track.getBoundingClientRect();
+            const spanMin = Math.max(60, tw.dawn_min - tw.dusk_min);
+            const startX = event.clientX;
+            const snapshot = night.schedule.map(b => ({ ...b }));
+            const minBlockDur = 10;
+
+            function onMove(ev) {
+                const dx = ev.clientX - startX;
+                const deltaMin = snap5((dx / rect.width) * spanMin);
+                const blocks = night.schedule;
+                const orig = snapshot[blockIdx];
+                const prevOrig = blockIdx > 0 ? snapshot[blockIdx - 1] : null;
+                const nextOrig = blockIdx < blocks.length - 1 ? snapshot[blockIdx + 1] : null;
+
+                if (mode === 'move') {
+                    const low = prevOrig ? prevOrig.end_min : tw.dusk_min;
+                    const high = (nextOrig ? nextOrig.start_min : tw.dawn_min) - orig.duration_min;
+                    const newStart = Math.max(low, Math.min(high, orig.start_min + deltaMin));
+                    blocks[blockIdx].start_min = newStart;
+                    blocks[blockIdx].end_min = newStart + orig.duration_min;
+                } else if (mode === 'left') {
+                    let newStart = orig.start_min + deltaMin;
+                    newStart = Math.min(orig.end_min - minBlockDur, Math.max(tw.dusk_min, newStart));
+                    if (prevOrig) {
+                        if (newStart < prevOrig.end_min) {
+                            // Push previous block's right edge smoothly
+                            const minPrevEnd = prevOrig.start_min + minBlockDur;
+                            newStart = Math.max(minPrevEnd, newStart);
+                            blocks[blockIdx - 1].end_min = newStart;
+                        } else {
+                            blocks[blockIdx - 1].end_min = prevOrig.end_min;
+                        }
+                    }
+                    blocks[blockIdx].start_min = newStart;
+                } else if (mode === 'right') {
+                    let newEnd = orig.end_min + deltaMin;
+                    newEnd = Math.max(orig.start_min + minBlockDur, Math.min(tw.dawn_min, newEnd));
+                    if (nextOrig) {
+                        if (newEnd > nextOrig.start_min) {
+                            // Push next block's left edge smoothly
+                            const maxNextStart = nextOrig.end_min - minBlockDur;
+                            newEnd = Math.min(maxNextStart, newEnd);
+                            blocks[blockIdx + 1].start_min = newEnd;
+                        } else {
+                            blocks[blockIdx + 1].start_min = nextOrig.start_min;
+                        }
+                    }
+                    blocks[blockIdx].end_min = newEnd;
+                }
+
+                customizedNights.add(activeNightIdx);
+                const toPct = (m) => ((m - tw.dusk_min) / spanMin) * 100;
+                const clampPct = (p) => Math.max(0, Math.min(100, p));
+                renderSliderTrack(night, toPct, clampPct);
+                renderScheduleTable(night);
+            }
+
+            function onUp() {
+                window.removeEventListener('pointermove', onMove);
+                window.removeEventListener('pointerup', onUp);
+                renderNightTabs();
+                renderPreview();
+            }
+
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+        }
+
+        function renderScheduleTable(night) {
+            const tbody = document.getElementById('scheduleTableBody');
+            const blocks = night.schedule;
+            const outCount = blocks.filter(b => b.out_of_window).length;
+            const warnEl = document.getElementById('warningCounter');
+            if (outCount > 0) {
+                warnEl.textContent = `⚠ 有 ${outCount} 个时段部分低于 ${plannerData.min_alt}° 阈值，请拖动回上方窗口内`;
+                warnEl.className = 'text-xs font-semibold text-red-600';
+            } else {
+                warnEl.textContent = `✓ 全部时段均在 ≥${plannerData.min_alt}° 有效观测窗口内`;
+                warnEl.className = 'text-xs font-medium text-emerald-600';
+            }
+
+            if (!blocks.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-gray-400">当晚暂无排程</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = blocks.map((b, idx) => {
+                const isBuffer = b.kind === 'buffer';
+                return `
+                    <tr class="${b.out_of_window ? 'bg-red-50/70' : 'hover:bg-gray-50'}">
+                        <td class="py-1.5 px-2 font-mono text-gray-500">${idx + 1}</td>
+                        <td class="py-1.5 px-2 font-medium text-gray-800">
+                            <span class="inline-block w-2.5 h-2.5 rounded-xs mr-1.5 align-middle" style="background:${isBuffer ? '#64748b' : b.color}"></span>
+                            ${isBuffer ? `[机动/留白] ${escapeHtml(b.label)}` : escapeHtml(b.name || b.label)}
+                            ${b.out_of_window ? '<span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">越界</span>' : ''}
+                        </td>
+                        <td class="py-1.5 px-2 text-center font-mono">${b.start_time} ~ ${b.end_time}</td>
+                        <td class="py-1.5 px-2 text-center font-mono font-semibold">${formatDur(b.duration_min)}</td>
+                        <td class="py-1.5 px-2 text-center font-mono ${b.out_of_window ? 'text-red-600 font-semibold' : 'text-gray-600'}">${escapeHtml(b.alt_summary)}</td>
+                        <td class="py-1.5 px-2">
+                            <input type="text" value="${escapeHtml(b.note || '')}" placeholder="添加备注..."
+                                onchange="updateBlockNote(${idx}, this.value)"
+                                class="w-full px-2 py-0.5 text-xs border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        </td>
+                        <td class="py-1.5 px-2 text-right whitespace-nowrap space-x-1">
+                            <button type="button" onclick="nudgeBlock(${idx}, -15)" class="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-700" title="缩短15分钟">-15m</button>
+                            <button type="button" onclick="nudgeBlock(${idx}, 15)" class="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-700" title="延长15分钟">+15m</button>
+                            <button type="button" onclick="swapBlocks(${idx}, ${idx - 1})" ${idx === 0 ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-30" title="前移">↑</button>
+                            <button type="button" onclick="swapBlocks(${idx}, ${idx + 1})" ${idx === blocks.length - 1 ? 'disabled' : ''} class="px-1.5 py-0.5 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-30" title="后移">↓</button>
+                            <button type="button" onclick="removeBlock(${idx})" class="px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 text-red-600" title="移除该段">×</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateBlockNote(idx, val) {
+            plannerData.nights[activeNightIdx].schedule[idx].note = val;
+            customizedNights.add(activeNightIdx);
+            renderPreview();
+        }
+
+        function nudgeBlock(idx, deltaMin) {
+            const night = plannerData.nights[activeNightIdx];
+            const tw = night.twilight;
+            const blocks = night.schedule;
+            const b = blocks[idx];
+            const next = idx < blocks.length - 1 ? blocks[idx + 1] : null;
+            const maxEnd = next ? next.start_min : tw.dawn_min;
+            let newEnd = Math.max(b.start_min + 10, Math.min(maxEnd, b.end_min + deltaMin));
+            b.end_min = snap5(newEnd);
+            customizedNights.add(activeNightIdx);
+            renderAll();
+        }
+
+        function swapBlocks(i, j) {
+            const night = plannerData.nights[activeNightIdx];
+            const blocks = night.schedule;
+            if (j < 0 || j >= blocks.length) return;
+            const a = Math.min(i, j);
+            const b = Math.max(i, j);
+            const durA = blocks[a].duration_min;
+            const durB = blocks[b].duration_min;
+            const startAnchor = blocks[a].start_min;
+            const gap = blocks[b].start_min - blocks[a].end_min;
+            const temp = blocks[a];
+            blocks[a] = blocks[b];
+            blocks[b] = temp;
+            blocks[a].start_min = startAnchor;
+            blocks[a].end_min = startAnchor + durB;
+            blocks[b].start_min = blocks[a].end_min + Math.max(0, gap);
+            blocks[b].end_min = blocks[b].start_min + durA;
+            customizedNights.add(activeNightIdx);
+            renderAll();
+        }
+
+        function removeBlock(idx) {
+            const night = plannerData.nights[activeNightIdx];
+            night.schedule.splice(idx, 1);
+            customizedNights.add(activeNightIdx);
+            renderAll();
+        }
+
+        function insertBufferBlock() {
+            const night = plannerData.nights[activeNightIdx];
+            const tw = night.twilight;
+            const blocks = night.schedule;
+            const label = prompt('输入机动/留白时段名称（如：前半夜预留、平场校准、机动）：', '前半夜机动预留');
+            if (label === null) return;
+            const dur = 60;
+
+            // Try to place at start of night by shifting or compressing first block if needed
+            let startMin = tw.dusk_min;
+            let endMin = Math.min(tw.dawn_min, startMin + dur);
+            if (blocks.length > 0 && blocks[0].start_min < endMin) {
+                const shift = endMin - blocks[0].start_min;
+                // Proportionally trim target blocks to make room if total would overflow dawn
+                const lastEnd = blocks[blocks.length - 1].end_min;
+                if (lastEnd + shift <= tw.dawn_min) {
+                    blocks.forEach(b => { b.start_min += shift; b.end_min += shift; });
+                } else {
+                    const totalSpan = Math.max(10, tw.dawn_min - endMin);
+                    const curSpan = Math.max(10, lastEnd - blocks[0].start_min);
+                    const ratio = totalSpan / curSpan;
+                    let cursor = endMin;
+                    blocks.forEach(b => {
+                        const newDur = Math.max(15, snap5(b.duration_min * ratio));
+                        b.start_min = cursor;
+                        b.end_min = Math.min(tw.dawn_min, cursor + newDur);
+                        cursor = b.end_min;
+                    });
+                }
+            }
+
+            blocks.unshift({
+                kind: 'buffer',
+                target_id: 'BUFFER',
+                label: label.trim() || '机动预留',
+                name: label.trim() || '机动预留',
+                planet: '',
+                color: '#64748b',
+                start_min: startMin,
+                end_min: endMin,
+                note: '',
+            });
+            customizedNights.add(activeNightIdx);
+            renderAll();
+        }
+
+        function resetCurrentNight() {
+            if (!defaultSchedulesBackup[activeNightIdx]) return;
+            plannerData.nights[activeNightIdx].schedule = JSON.parse(JSON.stringify(defaultSchedulesBackup[activeNightIdx]));
+            customizedNights.delete(activeNightIdx);
+            renderAll();
+        }
+
+        function syncCurrentNightToAll() {
+            const srcNight = plannerData.nights[activeNightIdx];
+            const srcDusk = srcNight.twilight.dusk_min;
+            const srcSpan = Math.max(60, srcNight.twilight.dawn_min - srcDusk);
+
+            plannerData.nights.forEach((dstNight, idx) => {
+                if (idx === activeNightIdx) return;
+                const dstDusk = dstNight.twilight.dusk_min;
+                const dstDawn = dstNight.twilight.dawn_min;
+                const dstSpan = Math.max(60, dstDawn - dstDusk);
+                const newSched = [];
+                let prevEnd = dstDusk;
+
+                srcNight.schedule.forEach(srcBlk => {
+                    const relStart = (srcBlk.start_min - srcDusk) / srcSpan;
+                    const relEnd = (srcBlk.end_min - srcDusk) / srcSpan;
+                    let s = snap5(dstDusk + relStart * dstSpan);
+                    let e = snap5(dstDusk + relEnd * dstSpan);
+                    s = Math.max(prevEnd, Math.min(dstDawn - 10, s));
+                    e = Math.max(s + 10, Math.min(dstDawn, e));
+
+                    if (srcBlk.kind !== 'buffer') {
+                        const pInfo = dstNight.planets[srcBlk.planet];
+                        if (pInfo && pInfo.valid && pInfo.win_start != null && pInfo.win_end != null) {
+                            const clampedS = Math.max(s, pInfo.win_start, prevEnd);
+                            const clampedE = Math.min(e, pInfo.win_end);
+                            if (clampedE - clampedS >= 10) {
+                                s = clampedS;
+                                e = clampedE;
+                            }
+                        }
+                    }
+                    const cloned = { ...srcBlk, start_min: s, end_min: e };
+                    enrichBlock(dstNight, cloned);
+                    newSched.push(cloned);
+                    prevEnd = e;
+                });
+
+                dstNight.schedule = newSched;
+                customizedNights.add(idx);
+            });
+
+            renderAll();
+            document.getElementById('statusBanner').textContent = `已将 ${srcNight.date} 的排程同步应用到其余 ${plannerData.nights.length - 1} 晚（已按各晚窗口自动适配）`;
+        }
+
+        function renderPreview() {
+            if (!plannerData) return;
+            const st = plannerData.station;
+            const observer = document.getElementById('observerInput').value.trim() || '待填写';
+            const assistant = document.getElementById('assistantInput').value.trim() || '待填写';
+            const customNote = document.getElementById('customNoteInput').value.trim();
+            const includeChecklist = document.getElementById('includeChecklistCb').checked;
+            const titleDate = plannerData.start_date === plannerData.end_date
+                ? plannerData.start_date
+                : `${plannerData.start_date} 至 ${plannerData.end_date}`;
+            const targetSummary = plannerData.selected_targets.map(t => t.short).join('、');
+
+            const t1Rows = plannerData.nights.map(n => {
+                const tw = n.twilight;
+                const m = n.moon;
+                const moonStr = m.in_night ? `${m.illum_pct}% (${m.night_start}~${m.night_end})` : `${m.illum_pct}% (暗夜无月)`;
+                return `
+                    <tr>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${n.date} (${n.weekday})</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${tw.sunset} / ${tw.sunrise}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono font-semibold text-blue-700">${tw.dusk} ~ ${tw.dawn}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${tw.astro_dusk} ~ ${tw.astro_dawn}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${formatDur(tw.dark_duration_min)}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center">${moonStr}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const t2Rows = plannerData.nights.flatMap(n =>
+                Object.values(n.planets).map(p => `
+                    <tr>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${n.date}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-medium">${escapeHtml(p.name_zh)}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${p.rise_time}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${p.transit_time} (${p.max_alt}°)</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${p.set_time}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${p.valid ? `${p.win_start_time} ~ ${p.win_end_time}` : '无有效窗口'}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center ${p.zenith_warning ? 'text-amber-700 font-semibold' : 'text-gray-600'}">${p.zenith_warning ? '近天顶(>85°)' : '正常'}</td>
+                    </tr>
+                `)
+            ).join('');
+
+            const t3Rows = plannerData.nights.flatMap(n => {
+                if (!n.schedule.length) {
+                    return `<tr><td class="border border-gray-300 px-2 py-1 text-center">${n.date}</td><td colspan="5" class="border border-gray-300 px-2 py-1 text-center text-gray-400">无排程</td></tr>`;
+                }
+                return n.schedule.map((b, i) => `
+                    <tr class="${b.out_of_window ? 'bg-red-50' : ''}">
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${i === 0 ? n.date : ''}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${b.start_time} ~ ${b.end_time}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${formatDur(b.duration_min)}</td>
+                        <td class="border border-gray-300 px-2 py-1">${b.kind === 'buffer' ? `[机动/留白] ${escapeHtml(b.label)}` : escapeHtml(b.name || b.label)}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center font-mono">${escapeHtml(b.alt_summary)}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-gray-600">${escapeHtml(b.note || '')}${b.out_of_window ? ' <span class="text-red-600 font-semibold">[越界预警]</span>' : ''}</td>
+                    </tr>
+                `);
+            }).join('');
+
+            const t4Rows = plannerData.exposure_rules.map(r => `
+                <tr>
+                    <td class="border border-gray-300 px-2 py-1 text-center font-mono font-semibold">${escapeHtml(r.code)}</td>
+                    <td class="border border-gray-300 px-2 py-1">${escapeHtml(r.target)}</td>
+                    <td class="border border-gray-300 px-2 py-1">${escapeHtml(r.pointing)}</td>
+                    <td class="border border-gray-300 px-2 py-1 text-center font-mono">${escapeHtml(r.filter)} / ${escapeHtml(r.suggested_exposure_s)}s</td>
+                    <td class="border border-gray-300 px-2 py-1 text-center font-mono">${escapeHtml(r.suggested_frames)}</td>
+                    <td class="border border-gray-300 px-2 py-1 text-center font-mono">${escapeHtml(r.snr_baseline)}</td>
+                    <td class="border border-gray-300 px-2 py-1 text-gray-600">${escapeHtml(r.notes)}</td>
+                </tr>
+            `).join('');
+
+            const checklistHtml = includeChecklist ? `
+                <div>
+                    <h3 class="text-sm font-bold text-blue-800 mb-2">五、一线实操与应急速查清单</h3>
+                    <ol class="list-decimal list-inside space-y-1 text-xs text-gray-700 leading-relaxed bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        ${plannerData.checklist.map(c => `<li><strong>${escapeHtml(c.title)}：</strong>${escapeHtml(c.detail)}</li>`).join('')}
+                    </ol>
+                </div>
+            ` : '';
+
+            const logSheetsHtml = plannerData.nights.map(n => `
+                <div class="print-page-break pt-4 border-t-2 border-dashed border-gray-200">
+                    <h3 class="text-sm font-bold text-blue-800 mb-1">观测记录表：${n.date} (${n.weekday}) — ${escapeHtml(st.short_name)}</h3>
+                    <p class="text-xs text-gray-600 mb-2">
+                        观测人：${escapeHtml(observer)} &nbsp;|&nbsp; 助手：${escapeHtml(assistant)} &nbsp;|&nbsp;
+                        暗夜(-12°)：${n.twilight.dusk}~${n.twilight.dawn} &nbsp;|&nbsp; 天气/视宁度：________ &nbsp;|&nbsp; 时钟偏差：____ / ____ / ____ s
+                    </p>
+                    <table class="w-full text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-blue-50 text-gray-800">
+                                <th class="border border-gray-300 px-2 py-1.5">计划/实测时段</th>
+                                <th class="border border-gray-300 px-2 py-1.5">目标代号</th>
+                                <th class="border border-gray-300 px-2 py-1.5">滤光片</th>
+                                <th class="border border-gray-300 px-2 py-1.5">曝光(s)</th>
+                                <th class="border border-gray-300 px-2 py-1.5">实拍张数</th>
+                                <th class="border border-gray-300 px-2 py-1.5">高度角/SNR</th>
+                                <th class="border border-gray-300 px-2 py-1.5">天气 / 结霜 / 文件名备注</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${n.schedule.map(b => {
+                                const rule = plannerData.exposure_rules.find(r => r.code === b.label || r.target.includes(b.target_id)) || {};
+                                return `
+                                    <tr>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-mono">${b.start_time}~${b.end_time}</td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-medium">${b.kind === 'buffer' ? `[机动] ${escapeHtml(b.label)}` : escapeHtml(b.label)}</td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center">${b.kind === 'buffer' ? '--' : escapeHtml(rule.filter || 'I')}</td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-mono">${b.kind === 'buffer' ? '--' : (rule.suggested_exposure_s ? rule.suggested_exposure_s + 's' : '')}</td>
+                                        <td class="border border-gray-300 px-2 py-1.5 text-center font-mono">${b.kind === 'buffer' ? '--' : escapeHtml(rule.suggested_frames || '')}</td>
+                                        <td class="border border-gray-300 px-2 py-1.5"></td>
+                                        <td class="border border-gray-300 px-2 py-1.5">${escapeHtml(b.note || '')}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                            <tr><td class="border border-gray-300 px-2 py-2.5"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td></tr>
+                            <tr><td class="border border-gray-300 px-2 py-2.5"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td><td class="border border-gray-300"></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            `).join('');
+
+            document.getElementById('previewSheet').innerHTML = `
+                <div class="text-center border-b border-gray-200 pb-4">
+                    <h2 class="text-xl sm:text-2xl font-bold text-gray-900">${escapeHtml(titleDate)} ${escapeHtml(st.short_name)} 天然卫星观测纲要及记录</h2>
+                    <p class="text-xs text-gray-500 mt-1">
+                        测站：${escapeHtml(st.name)} (MPC ${escapeHtml(st.code)}) · 东经 ${st.lon}° 北纬 ${st.lat}° 海拔 ${st.alt}m · 最低高度角阈值 ≥${plannerData.min_alt}°
+                    </p>
+                    <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-left">
+                        <div><span class="text-gray-500">观测人员：</span><strong>${escapeHtml(observer)}</strong></div>
+                        <div><span class="text-gray-500">观测助手：</span><strong>${escapeHtml(assistant)}</strong></div>
+                        <div><span class="text-gray-500">选定目标：</span><strong>${escapeHtml(targetSummary)}</strong></div>
+                        <div><span class="text-gray-500">望远镜/视场：</span><strong>${escapeHtml(st.aperture_cm)} / ${escapeHtml(st.fov_arcmin)}</strong></div>
+                        ${customNote ? `<div class="col-span-2 sm:col-span-4"><span class="text-gray-500">特别备注：</span><span>${escapeHtml(customNote)}</span></div>` : ''}
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-blue-800 mb-2">一、逐夜暗夜窗口与月相条件（表 1）</h3>
+                    ${st.notes ? `<p class="text-xs text-gray-600 mb-2">设备说明：${escapeHtml(st.notes)}</p>` : ''}
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-blue-50 text-gray-800">
+                                    <th class="border border-gray-300 px-2 py-1.5">观测夜 (BJT)</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">日落 / 日出</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">航海暗夜 (-12°)</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">天文暗夜 (-18°)</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">可用暗夜</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">月相与暗夜月光</th>
+                                </tr>
+                            </thead>
+                            <tbody>${t1Rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-blue-800 mb-2">二、所选目标所属行星升中落与 ≥${plannerData.min_alt}° 窗口（表 2）</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-blue-50 text-gray-800">
+                                    <th class="border border-gray-300 px-2 py-1.5">观测夜</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">大行星</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">升起</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">中天（最大仰角）</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">落下</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">暗夜 ≥${plannerData.min_alt}° 窗口</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">状态提示</th>
+                                </tr>
+                            </thead>
+                            <tbody>${t2Rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-blue-800 mb-2">三、逐夜精细观测排程表（表 3）</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-blue-50 text-gray-800">
+                                    <th class="border border-gray-300 px-2 py-1.5">观测夜</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">排程时段 (BJT)</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">时长</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">观测目标 / 事项</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">时段高度角</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">备注</th>
+                                </tr>
+                            </thead>
+                            <tbody>${t3Rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-blue-800 mb-2">四、实测曝光参数与指向建议（表 4）</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs border-collapse">
+                            <thead>
+                                <tr class="bg-blue-50 text-gray-800">
+                                    <th class="border border-gray-300 px-2 py-1.5">代号</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">目标卫星</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">指向方式</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">滤光片/曝光</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">建议张数</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">参考SNR</th>
+                                    <th class="border border-gray-300 px-2 py-1.5">实测要点与避坑</th>
+                                </tr>
+                            </thead>
+                            <tbody>${t4Rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+
+                ${checklistHtml}
+                ${logSheetsHtml}
+            `;
+        }
+
+        async function exportDocx() {
+            if (!plannerData) return;
+            const btn = document.getElementById('exportDocxBtn');
+            btn.disabled = true;
+            const origText = btn.innerHTML;
+            btn.innerHTML = '<span class="loader-sm"></span><span>生成中...</span>';
+
+            try {
+                // Strip heavy alt_samples before sending to backend
+                const cleanNights = plannerData.nights.map(n => {
+                    const cleanPlanets = {};
+                    Object.entries(n.planets).forEach(([k, v]) => {
+                        const { alt_samples, ...rest } = v;
+                        cleanPlanets[k] = rest;
+                    });
+                    return {
+                        date: n.date,
+                        weekday: n.weekday,
+                        twilight: n.twilight,
+                        moon: n.moon,
+                        planets: cleanPlanets,
+                        schedule: n.schedule,
+                    };
+                });
+
+                const payload = {
+                    station: plannerData.station,
+                    start_date: plannerData.start_date,
+                    end_date: plannerData.end_date,
+                    min_alt: plannerData.min_alt,
+                    observer: document.getElementById('observerInput').value.trim(),
+                    assistant: document.getElementById('assistantInput').value.trim(),
+                    custom_note: document.getElementById('customNoteInput').value.trim(),
+                    include_checklist: document.getElementById('includeChecklistCb').checked,
+                    selected_targets: plannerData.selected_targets,
+                    exposure_rules: plannerData.exposure_rules,
+                    nights: cleanNights,
+                };
+
+                const resp = await fetch('/api/planner/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                if (!resp.ok) {
+                    const errJson = await resp.json().catch(() => ({}));
+                    throw new Error(errJson.message || '导出 Word 失败');
+                }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const datePart = plannerData.start_date === plannerData.end_date
+                    ? plannerData.start_date
+                    : `${plannerData.start_date}_${plannerData.end_date}`;
+                a.download = `${datePart}_${plannerData.station.short_name}_观测纲要.docx`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+            }
+        }
+
+        // Initial load
+        window.addEventListener('DOMContentLoaded', () => {
+            highlightStationBtn('286');
+            fetchPlannerWindows();
+        });
+    </script>
+</body>
+
+</html>
