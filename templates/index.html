@@ -323,13 +323,13 @@
                                 </div>
                                 <div class="min-w-0">
                                     <label for="observationTime" class="sr-only" data-en-text="Observation time">观测时刻</label>
-                                    <input type="time" id="observationTime" value="21:00" required step="1"
+                                    <input type="time" id="observationTime" required step="1"
                                         onclick="openObservationPicker(this)" onchange="onLocalTimeChange()"
                                         class="min-w-0 w-full border border-gray-300 rounded-lg p-2 font-mono text-xs sm:text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                                 </div>
                             </div>
                             <input type="hidden" id="localTimeInput">
-                            <p class="text-[10px] text-gray-400 mt-1" data-en-text="Choose a date to calculate automatically. Time defaults to 21:00 and can be adjusted.">选择日期即自动计算，时间默认 21:00，可单独调整</p>
+                            <p class="text-[10px] text-gray-400 mt-1" data-en-text="Defaults to the current Beijing time. Choose a date or time to calculate automatically.">默认当前北京时间，选择日期或时刻后自动计算</p>
                         </div>
 
                         <!-- 观测站 -->
@@ -825,8 +825,9 @@
 
         // 页面初始化：按导师要求先查当前天体出证认图，后台异步拉取其他天体的高度角与倒计时，互不拉垮时间
         document.addEventListener('DOMContentLoaded', () => {
-            const beijingDate = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
-            document.getElementById('observationDate').value = beijingDate;
+            const beijingNow = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+            document.getElementById('observationDate').value = beijingNow.slice(0, 10);
+            document.getElementById('observationTime').value = beijingNow.slice(11, 19);
             syncObservationTime();
             localizePage();
             refreshLocalizedResults();
@@ -1561,7 +1562,7 @@
                     <h4 class="font-bold text-gray-900 text-base mb-2">3. 观测时间</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
                         <li><strong>指定观测日期</strong>：点击日期打开日历，选择需要观测的日期即自动更新星历、暗夜窗口和寻星图。</li>
-                        <li><strong>观测时刻</strong>：默认使用所选日期的 <strong>21:00</strong>，可在旁边单独调整。日期和时间均为<strong>北京时间 (UTC+8)</strong>，系统自动转换为 UTC 参与星历运算。</li>
+                        <li><strong>观测时刻</strong>：打开页面时，日期和时刻默认使用<strong>当前北京时间 (UTC+8)</strong>。可分别点选日期和时刻，系统按所选时间自动计算，并转换为 UTC 参与星历运算。</li>
                     </ul>
                 </div>
 
