@@ -1467,7 +1467,8 @@
                 elev: Math.round(alt).toString()
             });
 
-            const targetUrl = `https://stellarium-web.org/skysource/${encodeURIComponent(planet)}?${params.toString()}`;
+            // 内置天体直达入口可绕过旧域名跳转和在线名称搜索。
+            const targetUrl = `https://stellarium.com/sky/object/${encodeURIComponent(planet.toLowerCase())}?${params.toString()}`;
             window.open(targetUrl, '_blank', 'noopener,noreferrer');
         }
 
