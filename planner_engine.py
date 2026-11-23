@@ -53,6 +53,50 @@ def format_duration_zh(minutes: int) -> str:
     return f"{m}m"
 
 
+def resolve_target_meta(tid: str) -> dict[str, Any] | None:
+    """Resolve a built-in target ID or custom:<planet>:<label> specification."""
+    if tid in PLANNER_TARGETS_BY_ID:
+        return PLANNER_TARGETS_BY_ID[tid]
+    if tid.startswith("custom:"):
+        parts = tid.split(":", 2)
+        if len(parts) == 3:
+            planet = parts[1].strip().lower()
+            label = parts[2].strip()[:24]
+            if planet in PLANET_META and label:
+                pm = PLANET_META[planet]
+                return {
+                    "id": tid,
+                    "code": label,
+                    "planet": planet,
+                    "planet_zh": pm["zh"],
+                    "planet_en": pm["en"],
+                    "name": f"{label} ({pm['zh']}系自定义)",
+                    "short": label,
+                    "color": pm.get("color", "#4f46e5"),
+                    "order": 90,
+                }
+    return None
+
+
+def _resolve_exposure_rule(t_meta: dict[str, Any]) -> dict[str, Any]:
+    tid = t_meta["id"]
+    if tid in EXPOSURE_RULES:
+        return EXPOSURE_RULES[tid]
+    return {
+        "target": t_meta["name"],
+        "code": t_meta["short"],
+        "planet": t_meta["planet_zh"],
+        "pointing": f"{t_meta['short']}历表指向",
+        "mag": "--",
+        "filter": "I",
+        "suggested_exposure_s": "按试拍调整",
+        "suggested_interval_s": "0",
+        "suggested_frames": "20 ~ 30",
+        "snr_baseline": "--",
+        "notes": "自定义添加目标，建议现场试拍 1~2 帧确认信噪比与背景饱和度后再连续采样。",
+    }
+
+
 def _longest_true_run(mask: Any) -> tuple[int, int] | None:
     """Return (start_idx, end_idx) inclusive of the longest True contiguous run."""
     indices = [i for i, flag in enumerate(mask) if bool(flag)]
@@ -208,7 +252,7 @@ def auto_allocate_schedule(
     for item, s, dur in zip(valid_items, starts, durations):
         if dur <= 0:
             continue
-        meta = PLANNER_TARGETS_BY_ID.get(item["target_id"], {})
+        meta = resolve_target_meta(item["target_id"]) or {}
         blocks.append(
             {
                 "kind": "target",
@@ -450,8 +494,16 @@ def compute_planner_nights(
     if span_days > 14:
         raise ValueError("单次最多支持连续 14 晚的观测纲要排程")
 
-    clean_targets = [tid for tid in target_ids if tid in PLANNER_TARGETS_BY_ID]
-    if not clean_targets:
+    resolved_targets: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    for tid in target_ids:
+        if tid in seen_ids:
+            continue
+        meta = resolve_target_meta(tid)
+        if meta is not None:
+            resolved_targets.append(meta)
+            seen_ids.add(tid)
+    if not resolved_targets:
         raise ValueError("请至少选择一个观测目标")
 
     base_station = station_lookup(obs_code) if station_lookup else {
@@ -479,8 +531,8 @@ def compute_planner_nights(
     }
 
     planet_keys: list[str] = []
-    for tid in clean_targets:
-        p = PLANNER_TARGETS_BY_ID[tid]["planet"]
+    for t_meta in resolved_targets:
+        p = t_meta["planet"]
         if p not in planet_keys:
             planet_keys.append(p)
 
@@ -493,12 +545,11 @@ def compute_planner_nights(
             night_data = _compute_single_night_fallback(curr_date, planet_keys)
 
         target_windows = []
-        for tid in clean_targets:
-            t_meta = PLANNER_TARGETS_BY_ID[tid]
+        for t_meta in resolved_targets:
             p_info = night_data["planets"][t_meta["planet"]]
             target_windows.append(
                 {
-                    "target_id": tid,
+                    "target_id": t_meta["id"],
                     "code": t_meta["code"],
                     "short": t_meta["short"],
                     "name": t_meta["name"],
@@ -528,7 +579,7 @@ def compute_planner_nights(
         night_data["schedule"] = blocks
         nights.append(night_data)
 
-    exposure_list = [EXPOSURE_RULES[tid] for tid in clean_targets if tid in EXPOSURE_RULES]
+    exposure_list = [_resolve_exposure_rule(t_meta) for t_meta in resolved_targets]
 
     return {
         "success": True,
@@ -537,7 +588,7 @@ def compute_planner_nights(
         "end_date": end_date_str,
         "min_alt": min_alt,
         "sample_step_min": SAMPLE_STEP_MIN,
-        "selected_targets": [PLANNER_TARGETS_BY_ID[tid] for tid in clean_targets],
+        "selected_targets": resolved_targets,
         "nights": nights,
         "exposure_rules": exposure_list,
         "checklist": FIELD_CHECKLIST,

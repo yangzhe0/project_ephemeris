@@ -51,8 +51,32 @@ def test_planner_page_renders(client):
     html = resp.get_data(as_text=True)
     assert "观测纲要与多夜排程工作台" in html
     assert "O07" in html
+    assert "extraTargetSelect" in html
+    assert "5001 - J1" in html
+    assert "10005 - J10" in html
+    assert "10007 - J12" in html
     assert "/api/planner/windows" in html
     assert "/api/planner/export" in html
+
+
+def test_extra_and_custom_targets_schedule(client):
+    resp = client.post(
+        "/api/planner/windows",
+        json={
+            "observatory": "286",
+            "start_date": "2026-11-22",
+            "end_date": "2026-11-22",
+            "targets": ["J1", "J4", "J10", "J12", "custom:jupiter:J14"],
+            "min_alt": 30,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["success"] is True
+    assert len(data["selected_targets"]) == 5
+    assert len(data["exposure_rules"]) == 5
+    sched_ids = {b["target_id"] for b in data["nights"][0]["schedule"]}
+    assert {"J1", "J4", "J10", "J12", "custom:jupiter:J14"}.issubset(sched_ids)
 
 
 def test_lijiang_o07_windows_and_schedule(client):

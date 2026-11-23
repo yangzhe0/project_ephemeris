@@ -125,13 +125,65 @@ PLANNER_TARGETS = [
     },
 ]
 
-PLANNER_TARGETS_BY_ID = {t["id"]: t for t in PLANNER_TARGETS}
+EXTRA_TARGET_GROUPS = [
+    {
+        "label": "木星天然卫星（伽利略大卫星 J1–J4）",
+        "items": [
+            {"id": "J1", "code": "5001", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫一 (Io / 艾奥)", "short": "J1", "color": "#ea580c", "order": 11},
+            {"id": "J2", "code": "5002", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫二 (Europa / 欧罗巴)", "short": "J2", "color": "#f97316", "order": 12},
+            {"id": "J3", "code": "5003", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫三 (Ganymede / 盖尼米德)", "short": "J3", "color": "#fb923c", "order": 13},
+            {"id": "J4", "code": "5004", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫四 (Callisto / 卡利斯托)", "short": "J4", "color": "#c2410c", "order": 14},
+        ],
+    },
+    {
+        "label": "木星外围不规则卫星备选（J10–J13）",
+        "items": [
+            {"id": "J10", "code": "10005", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫十 (Lysithea)", "short": "J10", "color": "#be123c", "order": 15},
+            {"id": "J11", "code": "10006", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫十一 (Carme)", "short": "J11", "color": "#9f1239", "order": 16},
+            {"id": "J12", "code": "10007", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫十二 (Ananke)", "short": "J12", "color": "#881337", "order": 17},
+            {"id": "J13", "code": "10008", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫十三 (Leda)", "short": "J13", "color": "#a21caf", "order": 18},
+        ],
+    },
+    {
+        "label": "土星天然卫星备选（S2–S7）",
+        "items": [
+            {"id": "S2", "code": "6002", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫二 (Enceladus)", "short": "S2", "color": "#ca8a04", "order": 21},
+            {"id": "S3", "code": "6003", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫三 (Tethys)", "short": "S3", "color": "#eab308", "order": 22},
+            {"id": "S4", "code": "6004", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫四 (Dione)", "short": "S4", "color": "#d97706", "order": 23},
+            {"id": "S5", "code": "6005", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫五 (Rhea)", "short": "S5", "color": "#b45309", "order": 24},
+            {"id": "S6", "code": "6006", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫六 (Titan / 泰坦)", "short": "S6", "color": "#a16207", "order": 25},
+            {"id": "S7", "code": "6007", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫七 (Hyperion)", "short": "S7", "color": "#92400e", "order": 26},
+        ],
+    },
+    {
+        "label": "天王星天然卫星备选（U2–U5）",
+        "items": [
+            {"id": "U2", "code": "7002", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫二 (Umbriel)", "short": "U2", "color": "#0f766e", "order": 31},
+            {"id": "U3", "code": "7003", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫三 (Titania)", "short": "U3", "color": "#14b8a6", "order": 32},
+            {"id": "U4", "code": "7004", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫四 (Oberon)", "short": "U4", "color": "#0891b2", "order": 33},
+            {"id": "U5", "code": "7005", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫五 (Miranda)", "short": "U5", "color": "#0284c7", "order": 34},
+        ],
+    },
+    {
+        "label": "行星本体中心",
+        "items": [
+            {"id": "Neptune", "code": "8000", "planet": "neptune", "planet_zh": "海王星", "planet_en": "Neptune", "name": "海王星本体中心 (Neptune)", "short": "海王星", "color": "#1d4ed8", "order": 41},
+            {"id": "Saturn", "code": "6000", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土星本体中心 (Saturn)", "short": "土星", "color": "#92400e", "order": 42},
+            {"id": "Uranus", "code": "7000", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天王星本体中心 (Uranus)", "short": "天王星", "color": "#115e59", "order": 43},
+            {"id": "Jupiter", "code": "5000", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木星本体中心 (Jupiter)", "short": "木星", "color": "#991b1b", "order": 44},
+        ],
+    },
+]
+
+ALL_EXTRA_TARGETS = [item for grp in EXTRA_TARGET_GROUPS for item in grp["items"]]
+
+PLANNER_TARGETS_BY_ID = {t["id"]: t for t in (PLANNER_TARGETS + ALL_EXTRA_TARGETS)}
 
 PLANET_META = {
-    "neptune": {"zh": "海王星", "en": "Neptune", "mag": "7.9"},
-    "saturn": {"zh": "土星", "en": "Saturn", "mag": "0.8"},
-    "uranus": {"zh": "天王星", "en": "Uranus", "mag": "5.6"},
-    "jupiter": {"zh": "木星", "en": "Jupiter", "mag": "-2.5"},
+    "neptune": {"zh": "海王星", "en": "Neptune", "mag": "7.9", "color": "#2563eb"},
+    "saturn": {"zh": "土星", "en": "Saturn", "mag": "0.8", "color": "#d97706"},
+    "uranus": {"zh": "天王星", "en": "Uranus", "mag": "5.6", "color": "#0d9488"},
+    "jupiter": {"zh": "木星", "en": "Jupiter", "mag": "-2.5", "color": "#dc2626"},
 }
 
 STATION_PROFILES = {
@@ -316,6 +368,33 @@ EXPOSURE_RULES = {
         "snr_baseline": "8 ~ 12",
         "notes": "极暗卫星，优先在大口径望远镜或极佳暗夜条件下观测，单帧建议180s以上。",
     },
+    # 伽利略大卫星（极亮，防饱和短曝光）
+    "J1": {"target": "木卫一 (Io)", "code": "J1", "planet": "木星", "pointing": "木星/J1指向", "mag": "5.0", "filter": "I / V", "suggested_exposure_s": "0.5~2", "suggested_interval_s": "5", "suggested_frames": "50+", "snr_baseline": ">500", "notes": "极亮伽利略卫星，务必采用极短曝光或窄带/减光滤光片防止卫星及木星主星饱和。"},
+    "J2": {"target": "木卫二 (Europa)", "code": "J2", "planet": "木星", "pointing": "木星/J2指向", "mag": "5.3", "filter": "I / V", "suggested_exposure_s": "0.5~2", "suggested_interval_s": "5", "suggested_frames": "50+", "snr_baseline": ">500", "notes": "极亮伽利略卫星，注意避开木星强散射光，试拍确认峰值 ADU 未饱和。"},
+    "J3": {"target": "木卫三 (Ganymede)", "code": "J3", "planet": "木星", "pointing": "木星/J3指向", "mag": "4.6", "filter": "I / V", "suggested_exposure_s": "0.5~2", "suggested_interval_s": "5", "suggested_frames": "50+", "snr_baseline": ">500", "notes": "最亮木卫，注意控制单帧曝光防止溢出；若拍互掩/互食需高频连续采样。"},
+    "J4": {"target": "木卫四 (Callisto)", "code": "J4", "planet": "木星", "pointing": "木星/J4指向", "mag": "5.6", "filter": "I / V", "suggested_exposure_s": "1~3", "suggested_interval_s": "5", "suggested_frames": "50+", "snr_baseline": ">400", "notes": "距木星较远（最大约10′），可适当避开主星杂散光，同时兼顾参考星信噪比。"},
+    # 木星外围不规则卫星（极暗，长曝光）
+    "J10": {"target": "木卫十 (Lysithea)", "code": "J10", "planet": "木星", "pointing": "J10历表单独指向", "mag": "18.3", "filter": "I / Clear", "suggested_exposure_s": "180", "suggested_interval_s": "0", "suggested_frames": "15 ~ 25", "snr_baseline": "10 ~ 20", "notes": "暗弱外围卫星，建议大口径（如2.4m）或极佳无月暗夜长积分拍摄。"},
+    "J11": {"target": "木卫十一 (Carme)", "code": "J11", "planet": "木星", "pointing": "J11历表单独指向", "mag": "17.6", "filter": "I / Clear", "suggested_exposure_s": "150", "suggested_interval_s": "0", "suggested_frames": "15 ~ 25", "snr_baseline": "12 ~ 25", "notes": "逆行外围不规则卫星，配合寻星图与多帧闪烁法证认移动目标。"},
+    "J12": {"target": "木卫十二 (Ananke)", "code": "J12", "planet": "木星", "pointing": "J12历表单独指向", "mag": "18.8", "filter": "I / Clear", "suggested_exposure_s": "240", "suggested_interval_s": "0", "suggested_frames": "10 ~ 20", "snr_baseline": "8 ~ 15", "notes": "极暗卫星，推荐2m级以上望远镜、良好视宁度下长曝光采集。"},
+    "J13": {"target": "木卫十三 (Leda)", "code": "J13", "planet": "木星", "pointing": "J13历表单独指向", "mag": "20.2", "filter": "Clear / R", "suggested_exposure_s": "300", "suggested_interval_s": "0", "suggested_frames": "10 ~ 15", "snr_baseline": "5 ~ 10", "notes": "超暗目标（>20等），仅在大口径望远镜与极佳暗夜条件下尝试。"},
+    # 土星单体备选
+    "S2": {"target": "土卫二 (Enceladus)", "code": "S2", "planet": "土星", "pointing": "土星主星指向", "mag": "11.7", "filter": "I", "suggested_exposure_s": "10~15", "suggested_interval_s": "10", "suggested_frames": "30", "snr_baseline": "100+", "notes": "紧邻土星环与主星光晕，需在大距附近、良好视宁度下短曝光观测。"},
+    "S3": {"target": "土卫三 (Tethys)", "code": "S3", "planet": "土星", "pointing": "土星主星指向", "mag": "10.2", "filter": "I", "suggested_exposure_s": "15~20", "suggested_interval_s": "10", "suggested_frames": "30", "snr_baseline": "300+", "notes": "亮度较高，可与土星内侧卫星同视场采集。"},
+    "S4": {"target": "土卫四 (Dione)", "code": "S4", "planet": "土星", "pointing": "土星主星指向", "mag": "10.4", "filter": "I", "suggested_exposure_s": "15~20", "suggested_interval_s": "10", "suggested_frames": "30", "snr_baseline": "300+", "notes": "亮度适中，注意核对参考星与主星过曝拖尾方向。"},
+    "S5": {"target": "土卫五 (Rhea)", "code": "S5", "planet": "土星", "pointing": "土星主星指向", "mag": "9.7", "filter": "I", "suggested_exposure_s": "15~20", "suggested_interval_s": "10", "suggested_frames": "30", "snr_baseline": "400+", "notes": "较亮土卫，注意避免单帧曝光过长导致饱和。"},
+    "S6": {"target": "土卫六 (Titan)", "code": "S6", "planet": "土星", "pointing": "土星/S6指向", "mag": "8.4", "filter": "I", "suggested_exposure_s": "5~10", "suggested_interval_s": "10", "suggested_frames": "30", "snr_baseline": ">500", "notes": "最亮土卫（8.4等），单独测光/定位需控制曝光时间防止饱和。"},
+    "S7": {"target": "土卫七 (Hyperion)", "code": "S7", "planet": "土星", "pointing": "S7历表指向", "mag": "14.2", "filter": "I", "suggested_exposure_s": "30", "suggested_interval_s": "10", "suggested_frames": "30 ~ 40", "snr_baseline": "40 ~ 60", "notes": "距土星最大约4′，较暗且易与S5/S6接近，需仔细对照星图证认。"},
+    # 天王星单体备选
+    "U2": {"target": "天卫二 (Umbriel)", "code": "U2", "planet": "天王星", "pointing": "天王星主星指向", "mag": "14.8", "filter": "I", "suggested_exposure_s": "30", "suggested_interval_s": "20", "suggested_frames": "40", "snr_baseline": "100+", "notes": "与天王星同视场，注意主星散射光及近天顶跟踪稳定性。"},
+    "U3": {"target": "天卫三 (Titania)", "code": "U3", "planet": "天王星", "pointing": "天王星主星指向", "mag": "13.9", "filter": "I", "suggested_exposure_s": "30", "suggested_interval_s": "20", "suggested_frames": "40", "snr_baseline": "200+", "notes": "天王星最亮卫星，信噪比通常极佳。"},
+    "U4": {"target": "天卫四 (Oberon)", "code": "U4", "planet": "天王星", "pointing": "天王星主星指向", "mag": "14.1", "filter": "I", "suggested_exposure_s": "30", "suggested_interval_s": "20", "suggested_frames": "40", "snr_baseline": "200+", "notes": "距主星相对较远，受光晕干扰较小。"},
+    "U5": {"target": "天卫五 (Miranda)", "code": "U5", "planet": "天王星", "pointing": "天王星主星指向", "mag": "16.5", "filter": "I", "suggested_exposure_s": "30~40", "suggested_interval_s": "20", "suggested_frames": "40 ~ 60", "snr_baseline": "7 ~ 15", "notes": "极近天王星主星且暗弱，需优良视宁度方可从光晕中分辨。"},
+    # 行星本体中心
+    "Neptune": {"target": "海王星本体中心", "code": "8000", "planet": "海王星", "pointing": "海王星主星指向", "mag": "7.9", "filter": "I / V", "suggested_exposure_s": "1~5", "suggested_interval_s": "5", "suggested_frames": "30", "snr_baseline": ">500", "notes": "主星较亮，按实测峰值 ADU 控制曝光时间避免饱和。"},
+    "Saturn": {"target": "土星本体中心", "code": "6000", "planet": "土星", "pointing": "土星主星指向", "mag": "0.8", "filter": "窄带 / I", "suggested_exposure_s": "<0.5", "suggested_interval_s": "5", "suggested_frames": "30", "snr_baseline": ">500", "notes": "极亮行星本体，务必使用极短曝光或窄带滤光片防饱和。"},
+    "Uranus": {"target": "天王星本体中心", "code": "7000", "planet": "天王星", "pointing": "天王星主星指向", "mag": "5.6", "filter": "I / V", "suggested_exposure_s": "0.5~2", "suggested_interval_s": "5", "suggested_frames": "30", "snr_baseline": ">500", "notes": "主星极亮，注意防饱和及近天顶跟踪稳定性。"},
+    "Jupiter": {"target": "木星本体中心", "code": "5000", "planet": "木星", "pointing": "木星主星指向", "mag": "-2.5", "filter": "窄带 / 减光", "suggested_exposure_s": "<0.1", "suggested_interval_s": "5", "suggested_frames": "30", "snr_baseline": ">500", "notes": "全天极亮目标，常规广域 CCD 极易过曝，需极短曝光或专用滤光片。"},
 }
 
 FIELD_CHECKLIST = [

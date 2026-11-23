@@ -552,7 +552,7 @@ def index():
 
 @app.route("/planner")
 def planner():
-    from planner_data import PLANNER_TARGETS, STATION_PROFILES
+    from planner_data import EXTRA_TARGET_GROUPS, PLANNER_TARGETS, STATION_PROFILES
 
     bjt_now = datetime.now(timezone.utc).astimezone(ZoneInfo("Asia/Shanghai"))
     default_start = bjt_now.date().isoformat()
@@ -560,6 +560,7 @@ def planner():
     return render_template(
         "planner.html",
         targets=PLANNER_TARGETS,
+        extra_target_groups=EXTRA_TARGET_GROUPS,
         stations=list(STATION_PROFILES.values()),
         default_start=default_start,
         default_end=default_end,

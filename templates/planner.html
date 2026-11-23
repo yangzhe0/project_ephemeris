@@ -208,7 +208,7 @@
             </div>
 
             <!-- 目标多选区 -->
-            <div class="mt-3 pt-3 border-t border-gray-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div class="mt-3 pt-3 border-t border-gray-100 space-y-2.5">
                 <div class="flex flex-wrap items-center gap-1.5" id="targetSelector">
                     <span class="text-xs font-semibold text-gray-600 mr-1">观测目标：</span>
                     {% for t in targets %}
@@ -220,18 +220,65 @@
                         <span class="text-[10px] text-gray-400">{{ t.planet_zh }}</span>
                     </label>
                     {% endfor %}
+                    <!-- 动态添加的备选/自定义目标芯片 -->
+                    <span id="extraTargetChips" class="contents"></span>
                 </div>
 
-                <div class="flex items-center gap-3 flex-shrink-0">
-                    <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
-                        <input id="includeChecklistCb" type="checkbox" checked onchange="renderPreview()" class="accent-blue-600">
-                        <span>附带一线实操速查</span>
-                    </label>
-                    <button type="button" id="computeBtn" onclick="fetchPlannerWindows()"
-                        class="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition">
-                        <span id="computeSpinner" class="loader-sm hidden"></span>
-                        <span>解算窗口并生成排程</span>
-                    </button>
+                <!-- 备选天然卫星下拉列表 + 操作按钮 -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                    <div class="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                        <select id="extraTargetSelect" onchange="onExtraTargetSelect(this)"
+                            class="w-full sm:w-80 border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer shadow-2xs">
+                            <option value="" selected>+ 从备选天然卫星 / 行星中心添加 (J1–J4, J10–J13, S2–S7, U2–U5)...</option>
+                            {% for grp in extra_target_groups %}
+                            <optgroup label="{{ grp.label }}">
+                                {% for item in grp['items'] %}
+                                <option value="{{ item.id }}"
+                                    data-short="{{ item.short }}"
+                                    data-planet-zh="{{ item.planet_zh }}"
+                                    data-color="{{ item.color }}">
+                                    {{ item.code }} - {{ item.short }} {{ item.name }}
+                                </option>
+                                {% endfor %}
+                            </optgroup>
+                            {% endfor %}
+                            <option value="__custom__">✏️ 自定义添加其他卫星目标...</option>
+                        </select>
+
+                        <!-- 自定义目标输入条（默认折叠） -->
+                        <div id="customTargetBar" class="hidden flex items-center gap-1.5 flex-wrap">
+                            <select id="customTargetPlanet"
+                                class="border border-blue-300 rounded-lg px-2 py-1.5 text-xs bg-blue-50/30 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="jupiter">木星系</option>
+                                <option value="saturn">土星系</option>
+                                <option value="uranus">天王星系</option>
+                                <option value="neptune">海王星系</option>
+                            </select>
+                            <input id="customTargetLabel" type="text" maxlength="20" placeholder="输入代号如 J14 / 5005"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTarget();}"
+                                class="w-40 border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs font-mono bg-blue-50/20 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <button type="button" onclick="addCustomTarget()"
+                                class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition">
+                                添加
+                            </button>
+                            <button type="button" onclick="hideCustomTargetBar()"
+                                class="px-2 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs rounded-lg transition">
+                                取消
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 flex-shrink-0">
+                        <label class="inline-flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer select-none">
+                            <input id="includeChecklistCb" type="checkbox" checked onchange="renderPreview()" class="accent-blue-600">
+                            <span>附带一线实操速查</span>
+                        </label>
+                        <button type="button" id="computeBtn" onclick="fetchPlannerWindows()"
+                            class="inline-flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs transition">
+                            <span id="computeSpinner" class="loader-sm hidden"></span>
+                            <span>解算窗口并生成排程</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -429,6 +476,82 @@
             blk.out_of_window = ev.outOfWindow;
             blk.min_alt_in_block = ev.minAltInBlock;
             return blk;
+        }
+
+        const addedExtraTargets = [];
+        const PLANET_ZH_MAP = { neptune: '海王星', saturn: '土星', uranus: '天王星', jupiter: '木星' };
+        const PLANET_COLOR_MAP = { neptune: '#2563eb', saturn: '#d97706', uranus: '#0d9488', jupiter: '#dc2626' };
+
+        function renderExtraTargetChips() {
+            const container = document.getElementById('extraTargetChips');
+            if (!container) return;
+            container.innerHTML = addedExtraTargets.map((t, idx) => `
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs bg-blue-50/70 border-blue-200 text-blue-900 select-none">
+                    <input type="checkbox" class="target-cb accent-blue-600" value="${escapeHtml(t.id)}" checked>
+                    <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${escapeHtml(t.color)}"></span>
+                    <span class="font-medium">${escapeHtml(t.short)}</span>
+                    <span class="text-[10px] text-blue-600/80">${escapeHtml(t.planet_zh)}</span>
+                    <button type="button" onclick="removeExtraTarget(${idx})" class="ml-0.5 text-blue-400 hover:text-red-600 font-bold leading-none" title="移除备选目标">×</button>
+                </span>
+            `).join('');
+        }
+
+        function onExtraTargetSelect(selectEl) {
+            const val = selectEl.value;
+            if (!val) return;
+            if (val === '__custom__') {
+                document.getElementById('customTargetBar').classList.remove('hidden');
+                document.getElementById('customTargetLabel').focus();
+                selectEl.value = '';
+                return;
+            }
+            const opt = selectEl.options[selectEl.selectedIndex];
+            if (!addedExtraTargets.some(t => t.id === val)) {
+                addedExtraTargets.push({
+                    id: val,
+                    short: opt.dataset.short || val,
+                    planet_zh: opt.dataset.planetZh || '',
+                    color: opt.dataset.color || '#2563eb',
+                });
+                renderExtraTargetChips();
+                fetchPlannerWindows();
+            }
+            selectEl.value = '';
+        }
+
+        function addCustomTarget() {
+            const planet = document.getElementById('customTargetPlanet').value;
+            const rawLabel = document.getElementById('customTargetLabel').value.trim();
+            if (!rawLabel) {
+                alert('请输入自定义目标代号（如 J14、5005）');
+                return;
+            }
+            const cleanLabel = rawLabel.replace(/:/g, '').slice(0, 20);
+            const id = `custom:${planet}:${cleanLabel}`;
+            if (!addedExtraTargets.some(t => t.id === id)) {
+                addedExtraTargets.push({
+                    id,
+                    short: cleanLabel,
+                    planet_zh: PLANET_ZH_MAP[planet] || planet,
+                    color: PLANET_COLOR_MAP[planet] || '#4f46e5',
+                });
+                renderExtraTargetChips();
+                fetchPlannerWindows();
+            }
+            document.getElementById('customTargetLabel').value = '';
+            hideCustomTargetBar();
+        }
+
+        function hideCustomTargetBar() {
+            document.getElementById('customTargetBar').classList.add('hidden');
+        }
+
+        function removeExtraTarget(idx) {
+            addedExtraTargets.splice(idx, 1);
+            renderExtraTargetChips();
+            if (getSelectedTargets().length > 0) {
+                fetchPlannerWindows();
+            }
         }
 
         function getSelectedTargets() {
