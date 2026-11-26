@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-en-text="Satellite Ephemeris &amp; Finder Charts">天文卫星星历与寻星图工具</title>
+    <title data-en-text="Satellite Ephemeris &amp; Finder Charts">天文卫星星历与证认图工具</title>
     <link rel="icon" href="/favicon.png" type="image/jpeg">
     <link rel="shortcut icon" href="/favicon.ico">
     <script src="/static/tailwind.min.js" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com';"></script>
@@ -66,7 +66,7 @@
             animation: fade-in 0.2s ease-out;
         }
 
-        /* 寻星图中心目标标记（仅显示图层，不写入原始 DSS 图片） */
+        /* 证认图中心目标标记（仅显示图层，不写入原始 DSS 图片） */
         .target-marker {
             --marker-scale: 1;
             position: absolute;
@@ -103,15 +103,60 @@
             height: 1px;
         }
 
+        #previewContainer {
+            container-type: size;
+        }
 
+        .chart-control {
+            border: 1px solid rgb(255 255 255 / 18%);
+            border-radius: 0.5rem;
+            background: rgb(15 23 42 / 78%);
+            color: #f1f5f9;
+            font-size: 0.75rem;
+            line-height: 1rem;
+            white-space: nowrap;
+            backdrop-filter: blur(8px);
+        }
 
+        .chart-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.375rem 0.5rem;
+        }
+
+        .chart-action:hover {
+            background: #334155;
+        }
+
+        .chart-fov-input {
+            appearance: textfield;
+        }
+
+        .chart-fov-input::-webkit-inner-spin-button,
+        .chart-fov-input::-webkit-outer-spin-button {
+            appearance: none;
+            margin: 0;
+        }
+
+        @container (min-aspect-ratio: 13/10) {
+            #previewActions {
+                flex-direction: column;
+            }
+        }
+
+        @container (aspect-ratio < 13/10) {
+            #previewContent {
+                padding-top: 2.5rem;
+            }
+        }
     </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-100 min-h-screen flex flex-col lg:h-dvh lg:min-h-0 lg:overflow-hidden">
 
     <!-- 顶部导航栏 -->
-    <header class="bg-white shadow-2xs border-b border-gray-200 z-10">
+    <header class="bg-white shadow-2xs border-b border-gray-200 z-10 shrink-0">
         <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-0 sm:h-16 grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-2 gap-y-1">
             <!-- 品牌标识与标题（响应式优化，手机端不折行、字号适度） -->
             <div class="order-1 flex items-center gap-2 sm:gap-3 min-w-0">
@@ -130,8 +175,8 @@
                 </div>
                 <div class="min-w-0">
                     <h1 class="text-[15px] sm:text-base md:text-lg lg:text-xl font-bold text-gray-800 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
-                        <span class="sm:hidden" data-en-text="Sat. Ephemeris">卫星星历与寻星图</span>
-                        <span class="hidden sm:inline" data-en-text="Satellite Ephemeris &amp; Finder Charts">天文卫星星历与寻星图工具</span>
+                        <span class="sm:hidden" data-en-text="Sat. Ephemeris">卫星星历与证认图</span>
+                        <span class="hidden sm:inline" data-en-text="Satellite Ephemeris &amp; Finder Charts">天文卫星星历与证认图工具</span>
                     </h1>
                     <p class="text-[10px] sm:text-xs text-gray-400 sm:text-gray-500 leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
                         SAI MSU · STScI DSS
@@ -183,13 +228,13 @@
     </header>
 
     <!-- 主内容区域 -->
-    <main class="flex-1 max-w-7xl w-full mx-auto p-3 md:p-4 lg:p-5 flex flex-col lg:flex-row gap-4">
+    <main class="flex-1 min-h-0 max-w-7xl w-full mx-auto px-3 md:px-4 lg:px-5 pt-2 pb-3 lg:pb-2 flex flex-col lg:flex-row gap-3">
 
         <!-- 左侧：参数设置面板 -->
-        <div class="w-full lg:w-1/3 flex flex-col gap-4">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full">
+        <div class="w-full lg:w-1/3 min-w-0 flex flex-col">
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col h-full lg:min-h-0">
                 <!-- 头部：标题与自动状态 -->
-                <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                <div class="px-5 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
                     <h2 class="font-bold text-gray-800 flex items-center gap-2 text-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-500" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor">
@@ -205,19 +250,71 @@
                     </span>
                 </div>
 
-                <!-- 浮动在最上方的“开始计算”按钮（调整视场、历表或输入自定义编号时使用） -->
-                <div class="p-3 bg-gray-50 border-b border-gray-100 flex-none">
-                    <button id="submitBtn" onclick="submitCalculation()"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition flex justify-center items-center gap-2 shadow-sm hover:shadow active:scale-98 duration-150">
-                        <div class="loader" id="btnLoader"></div>
-                        <span id="btnText">开始计算</span>
-                    </button>
-                </div>
+                <form id="calcForm" class="flex min-h-0 flex-1 flex-col" onsubmit="event.preventDefault();submitCalculation();">
+                    <div class="px-4 py-2 border-b border-gray-100 shrink-0">
+                        <button type="button" id="submitBtn" onclick="submitCalculation()"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg transition flex justify-center items-center gap-2 shadow-sm hover:shadow active:scale-98 duration-150">
+                            <div class="loader" id="btnLoader"></div>
+                            <span id="btnText">开始计算</span>
+                        </button>
+                    </div>
 
-                <!-- 下方可整体滚动的表单区域（内部不出现局促的小滚动条） -->
-                <div class="p-4 flex-1 overflow-y-auto space-y-4">
-                    <form id="calcForm" class="space-y-4" onsubmit="event.preventDefault();submitCalculation();">
-                        
+                    <!-- 桌面端固定计算按钮，其他控件在左侧面板内滚动。 -->
+                    <div class="relative p-4 pt-3 flex-1 space-y-4 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain">
+                        <!-- 观测站 -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="observatorySelect" class="block text-xs font-semibold text-gray-700" data-en-text="Observatory">观测台站 (Observatory)</label>
+                                <span id="currentStationBadge" class="max-w-[55%] truncate text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200" data-en-text="286 Kunming">286 云南台</span>
+                            </div>
+
+                            <!-- 原生触控下拉菜单（桌面/手机双端完美兼容，一键即换即算） -->
+                            <select id="observatorySelect" onchange="onObservatorySelectChange()"
+                                class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-xs sm:text-sm font-medium text-gray-800 cursor-pointer shadow-2xs">
+                                <optgroup label="国内主要天文台站" data-en-label="Observatories in China">
+                                    <option value="286" selected data-en-text="[286] Yunnan Observatories, Kunming 1 m">[286] 云南天文台昆明 1m望远镜 (云南昆明)</option>
+                                    <option value="O44" data-en-text="[O44] Lijiang Gaomeigu 2.4 m">[O44] 丽江高美古 2.4m望远镜 (云南丽江)</option>
+                                    <option value="327" data-en-text="[327] NAOC Xinglong 2.16 m">[327] 国家天文台兴隆基地 2.16m (河北兴隆)</option>
+                                    <option value="330" data-en-text="[330] Purple Mountain Observatory, Nanjing">[330] 紫金山天文台 (江苏南京)</option>
+                                    <option value="D29" data-en-text="[D29] Purple Mountain Observatory, Xuyi">[D29] 紫金山天文台盱眙观测站 (江苏盱眙)</option>
+                                    <option value="337" data-en-text="[337] Sheshan Observatory 1.56 m">[337] 佘山天文台 1.56m望远镜 (上海佘山)</option>
+                                    <option value="C42" data-en-text="[C42] Xinjiang Astronomical Observatory, Nanshan">[C42] 新疆天文台南山观测站 (新疆南山)</option>
+                                    <option value="D39" data-en-text="[D39] Shandong University, Weihai 1 m">[D39] 山东大学威海天文台 1m (山东威海)</option>
+                                </optgroup>
+                                <optgroup label="地心与国际经典台站" data-en-label="Geocentric and international sites">
+                                    <option value="500" data-en-text="[500] Geocentric (no local horizon)">[500] 地心坐标 (Geocentric / 全天无地平)</option>
+                                    <option value="000" data-en-text="[000] Royal Observatory, Greenwich">[000] 皇家格林尼治天文台 (Greenwich)</option>
+                                    <option value="568" data-en-text="[568] Mauna Kea">[568] 夏威夷莫纳克亚山 (Mauna Kea)</option>
+                                    <option value="809" data-en-text="[809] ESO La Silla Observatory">[809] 欧洲南方天文台拉西拉 (La Silla)</option>
+                                    <option value="309" data-en-text="[309] Palomar Observatory">[309] 帕洛马山天文台 (Palomar Mountain)</option>
+                                    <option value="675" data-en-text="[675] Cerro Tololo Inter-American Observatory">[675] 智利托洛洛山美洲际天文台 (CTIO)</option>
+                                </optgroup>
+                                <option value="custom" data-en-text="✏️ Enter a station code (1,400+ MPC sites)…">✏️ 手动输入其他台站代码 (支持全球 1400+ MPC 测站)...</option>
+                            </select>
+
+                            <!-- 自定义测站输入框（选中“手动输入”时显示） -->
+                            <div id="customObsWrapper" class="hidden mt-2">
+                                <div class="flex gap-2">
+                                    <input type="text" id="customObsInput" placeholder="输入 3 位 IAU/MPC 测站代码 (如 010, 046, 290 等)" data-en-placeholder="Enter a 3-character IAU/MPC code, e.g. 010"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();applyCustomObservatory();}"
+                                        class="min-w-0 flex-1 border border-blue-300 rounded-lg p-2 text-xs font-mono uppercase bg-blue-50/30 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <button type="button" onclick="applyCustomObservatory()"
+                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs" data-en-text="Apply">
+                                        应用
+                                    </button>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1" data-en-text="Supports 1,400+ MPC sites. Press Enter or click Apply.">支持全球 1400+ MPC 台站，按回车或点击应用即可</p>
+                            </div>
+
+                            <!-- 存储当前实际测站代码 -->
+                            <input type="hidden" id="observatory" value="286">
+
+                            <p class="text-[10px] text-gray-400 mt-1 flex items-center justify-between">
+                                <span data-en-text="Changing station updates darkness and altitude">切换台站即自动更新当夜暗夜时刻与高度角</span>
+                                <span class="text-emerald-600 font-medium" data-en-text="Auto-update">即选即算</span>
+                            </p>
+                        </div>
+
                         <!-- 目标天体（完全铺平展开，底色动态进度条显示剩余可观测时间） -->
                         <div>
                             <div class="flex justify-between items-center mb-1.5">
@@ -296,9 +393,9 @@
                             </div>
                         </div>
 
-                        <!-- 观测时间 (北京时间 +8) -->
+                        <!-- 指定观测时间 -->
                         <div>
-                            <p class="block text-xs font-medium text-gray-700 mb-1" data-en-text="Observation time (Beijing, UTC+8)">观测时间 (北京时间 +8)</p>
+                            <p class="block text-xs font-medium text-gray-700 mb-1" data-en-text="Set observation time (Beijing, UTC+8)">指定观测时间 (北京时间 +8)</p>
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="min-w-0">
                                     <label for="observationDate" class="sr-only" data-en-text="Observation date">观测日期</label>
@@ -321,117 +418,53 @@
                             </div>
                         </div>
 
-                        <!-- 观测站 -->
-                        <div>
-                            <div class="flex justify-between items-center mb-1">
-                                <label for="observatorySelect" class="block text-xs font-semibold text-gray-700" data-en-text="Observatory">观测台站 (Observatory)</label>
-                                <span id="currentStationBadge" class="max-w-[55%] truncate text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200" data-en-text="286 Kunming">286 云南台</span>
+                        <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,0.65fr)_minmax(0,1.15fr)] gap-2 border-t border-gray-100 pt-3">
+                            <div class="min-w-0">
+                                <label for="nde" class="block mb-1 text-xs font-medium text-gray-700" data-en-text="Model">历表类型</label>
+                                <select id="nde"
+                                    class="w-full h-8 text-xs border border-gray-300 rounded-md px-1.5 bg-white">
+                                    <option value="6" selected>DE441</option>
+                                    <option value="8">INPOP19a</option>
+                                    <option value="7">INPOP17a</option>
+                                    <option value="1">INPOP13C</option>
+                                    <option value="9">EPM2021</option>
+                                    <option value="5">DE431</option>
+                                    <option value="2">DE405</option>
+                                    <option value="3">DE406</option>
+                                    <option value="0">DE200</option>
+                                    <option value="4">VSOP87</option>
+                                    <option value="10">LeVerrier</option>
+                                </select>
                             </div>
-
-                            <!-- 原生触控下拉菜单（桌面/手机双端完美兼容，一键即换即算） -->
-                            <select id="observatorySelect" onchange="onObservatorySelectChange()"
-                                class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none bg-white transition text-xs sm:text-sm font-medium text-gray-800 cursor-pointer shadow-2xs">
-                                <optgroup label="国内主要天文台站" data-en-label="Observatories in China">
-                                    <option value="286" selected data-en-text="[286] Yunnan Observatories, Kunming 1 m">[286] 云南天文台昆明 1m望远镜 (云南昆明)</option>
-                                    <option value="O44" data-en-text="[O44] Lijiang Gaomeigu 2.4 m">[O44] 丽江高美古 2.4m望远镜 (云南丽江)</option>
-                                    <option value="327" data-en-text="[327] NAOC Xinglong 2.16 m">[327] 国家天文台兴隆基地 2.16m (河北兴隆)</option>
-                                    <option value="330" data-en-text="[330] Purple Mountain Observatory, Nanjing">[330] 紫金山天文台 (江苏南京)</option>
-                                    <option value="D29" data-en-text="[D29] Purple Mountain Observatory, Xuyi">[D29] 紫金山天文台盱眙观测站 (江苏盱眙)</option>
-                                    <option value="337" data-en-text="[337] Sheshan Observatory 1.56 m">[337] 佘山天文台 1.56m望远镜 (上海佘山)</option>
-                                    <option value="C42" data-en-text="[C42] Xinjiang Astronomical Observatory, Nanshan">[C42] 新疆天文台南山观测站 (新疆南山)</option>
-                                    <option value="D39" data-en-text="[D39] Shandong University, Weihai 1 m">[D39] 山东大学威海天文台 1m (山东威海)</option>
-                                </optgroup>
-                                <optgroup label="地心与国际经典台站" data-en-label="Geocentric and international sites">
-                                    <option value="500" data-en-text="[500] Geocentric (no local horizon)">[500] 地心坐标 (Geocentric / 全天无地平)</option>
-                                    <option value="000" data-en-text="[000] Royal Observatory, Greenwich">[000] 皇家格林尼治天文台 (Greenwich)</option>
-                                    <option value="568" data-en-text="[568] Mauna Kea">[568] 夏威夷莫纳克亚山 (Mauna Kea)</option>
-                                    <option value="809" data-en-text="[809] ESO La Silla Observatory">[809] 欧洲南方天文台拉西拉 (La Silla)</option>
-                                    <option value="309" data-en-text="[309] Palomar Observatory">[309] 帕洛马山天文台 (Palomar Mountain)</option>
-                                    <option value="675" data-en-text="[675] Cerro Tololo Inter-American Observatory">[675] 智利托洛洛山美洲际天文台 (CTIO)</option>
-                                </optgroup>
-                                <option value="custom" data-en-text="✏️ Enter a station code (1,400+ MPC sites)…">✏️ 手动输入其他台站代码 (支持全球 1400+ MPC 测站)...</option>
-                            </select>
-
-                            <!-- 自定义测站输入框（选中“手动输入”时显示） -->
-                            <div id="customObsWrapper" class="hidden mt-2">
-                                <div class="flex gap-2">
-                                    <input type="text" id="customObsInput" placeholder="输入 3 位 IAU/MPC 测站代码 (如 010, 046, 290 等)" data-en-placeholder="Enter a 3-character IAU/MPC code, e.g. 010"
-                                        onkeydown="if(event.key==='Enter'){event.preventDefault();applyCustomObservatory();}"
-                                        class="min-w-0 flex-1 border border-blue-300 rounded-lg p-2 text-xs font-mono uppercase bg-blue-50/30 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                                    <button type="button" onclick="applyCustomObservatory()"
-                                        class="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition active:scale-95 shadow-2xs" data-en-text="Apply">
-                                        应用
-                                    </button>
+                            <div class="min-w-0">
+                                <label for="ntimes" class="block mb-1 text-xs font-medium text-gray-700" data-en-text="Rows">条数</label>
+                                <input type="number" id="ntimes" value="1" min="1" max="100" step="1" required
+                                    class="w-full h-8 text-xs border border-gray-300 rounded-md px-1 text-center">
+                            </div>
+                            <div class="min-w-0">
+                                <p id="timeStepLabel" class="mb-1 text-xs font-medium text-gray-700" data-en-text="Time step">步长</p>
+                                <div role="group" aria-labelledby="timeStepLabel" class="flex h-8 items-center border border-gray-300 rounded-md text-xs">
+                                    <button type="button" id="prevTimeStep" onclick="changeTimeStep(-1)" disabled
+                                        class="h-full px-1.5 rounded-l-md text-gray-700 enabled:hover:bg-gray-100 disabled:opacity-30"
+                                        aria-label="缩短步长" data-en-aria-label="Shorter time step">‹</button>
+                                    <output id="timeStepValue" class="flex-1 whitespace-nowrap text-center font-medium">1 分钟</output>
+                                    <button type="button" id="nextTimeStep" onclick="changeTimeStep(1)"
+                                        class="h-full px-1.5 rounded-r-md text-gray-700 enabled:hover:bg-gray-100 disabled:opacity-30"
+                                        aria-label="加长步长" data-en-aria-label="Longer time step">›</button>
                                 </div>
-                                <p class="text-[10px] text-gray-400 mt-1" data-en-text="Supports 1,400+ MPC sites. Press Enter or click Apply.">支持全球 1400+ MPC 台站，按回车或点击应用即可</p>
                             </div>
-
-                            <!-- 存储当前实际测站代码 -->
-                            <input type="hidden" id="observatory" value="286">
-
-                            <p class="text-[10px] text-gray-400 mt-1 flex items-center justify-between">
-                                <span data-en-text="Changing station updates darkness and altitude">切换台站即自动更新当夜暗夜时刻与高度角</span>
-                                <span class="text-emerald-600 font-medium" data-en-text="Auto-update">即选即算</span>
-                            </p>
                         </div>
-
-                        <!-- 高级参数（平时不经常用到，默认折叠，可按需微调） -->
-                        <details class="group border border-gray-200 rounded-lg overflow-hidden">
-                            <summary
-                                class="flex items-center justify-between cursor-pointer p-3 bg-gray-50 text-gray-600 text-sm hover:bg-gray-100 transition select-none">
-                                <span data-en-text="Advanced (field of view, ephemeris, time step)">高级参数设置 (视场 / 历表 / 步长)</span>
-                                <svg class="w-4 h-4 group-open:rotate-180 transition-transform" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </summary>
-                            <div class="p-3 bg-white grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-500 mb-1 block" data-en-text="Ephemeris model">历表类型</label>
-                                    <select id="nde"
-                                        class="w-full text-xs border border-gray-300 rounded p-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
-                                        <option value="6" selected>DE441 (Default)</option>
-                                        <option value="8">INPOP19a</option>
-                                        <option value="7">INPOP17a</option>
-                                        <option value="1">INPOP13C</option>
-                                        <option value="9">EPM2021</option>
-                                        <option value="5">DE431</option>
-                                        <option value="2">DE405</option>
-                                        <option value="3">DE406</option>
-                                        <option value="0">DE200</option>
-                                        <option value="4">VSOP87</option>
-                                        <option value="10">LeVerrier</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="text-xs text-purple-600 font-bold mb-1 block" data-en-text="FOV (arcmin)">视场 FOV (角分)</label>
-                                    <input type="number" id="fov" value="10" min="1" max="60"
-                                        class="w-full text-xs border border-purple-200 bg-purple-50 text-purple-700 font-bold rounded p-1.5 text-center focus:ring-2 focus:ring-purple-500 focus:outline-none">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-500 mb-1 block" data-en-text="Number of steps">步数</label>
-                                    <input type="number" id="ntimes" value="1" min="1" max="100" step="1"
-                                        class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-500 mb-1 block" data-en-text="Step size (hours)">步长 (Hours)</label>
-                                    <input type="number" id="timestep" value="1" min="0.001" max="8760" step="any"
-                                        class="w-full text-xs border border-gray-300 rounded p-1.5 text-center">
-                                </div>
-                            </div>
-                        </details>
-                    </form>
-                </div>
+                    </div>
+                </form>
             </div>
         </div>
 
         <!-- 右侧：结果与预览区域 -->
-        <div class="w-full lg:w-2/3 flex flex-col gap-4">
+        <div class="w-full lg:w-2/3 min-w-0 flex flex-col gap-4 lg:min-h-0 lg:overflow-hidden">
 
             <!-- 状态/错误提示 -->
             <div id="errorMsg"
-                class="hidden w-full bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                class="hidden w-full bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-red-500 mt-0.5" viewBox="0 0 20 20"
                     fill="currentColor">
                     <path fill-rule="evenodd"
@@ -456,54 +489,54 @@
             </div>
 
             <!-- 结果显示区域 -->
-            <div id="resultArea" class="hidden flex-1 flex flex-col gap-4">
+            <div id="resultArea" class="hidden flex-1 flex flex-col gap-2 lg:min-h-0">
 
                 <!-- 计算数据卡片 -->
                 <div
-                    class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden max-h-[320px] flex flex-col">
+                    class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden max-h-[320px] flex flex-col lg:max-h-[min(320px,45%)]">
                     <div
-                        class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex justify-between items-center flex-none">
-                        <h2 class="font-bold text-gray-800 flex items-center gap-2 text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-600" fill="none"
+                        class="px-3 py-1.5 border-b border-gray-100 bg-gray-50 flex justify-between items-center gap-2 flex-none">
+                        <h2 class="font-bold text-gray-800 flex items-center gap-1.5 text-sm shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="hidden sm:block h-4 w-4 text-green-600" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <span data-en-text="Ephemeris results">计算结果与高度角</span>
                         </h2>
-                        <div id="targetSummaryHeader" class="text-xs text-gray-500 font-mono hidden sm:block"></div>
+                        <div class="min-w-0 flex items-center justify-end gap-1.5 text-sm">
+                            <span id="resultTargetName" class="truncate font-bold text-gray-800"></span>
+                            <span id="resultMagnitude" class="hidden shrink-0 rounded bg-blue-100 px-1.5 py-0.5 font-bold text-blue-800"></span>
+                        </div>
                     </div>
-                    <div id="resultCards" class="flex-1 overflow-auto">
+                    <div id="resultCards" class="min-h-0 flex-1 overflow-auto overscroll-contain">
                         <!-- 动态插入结果 -->
                     </div>
                 </div>
 
-                <!-- 图像预览区域占位符 -->
+                <!-- 证认图与浮动操作 -->
                 <div id="previewContainer"
-                    class="hidden bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
-                    <div class="px-4 py-2 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                        <h2 class="font-bold text-gray-800 flex items-center gap-2 text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-600" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span data-en-text="Finder chart">图像预览</span>
-                        </h2>
-                        <div class="flex flex-wrap justify-end gap-2" id="previewActions">
-                            <!-- 动态插入下载按钮 -->
-                        </div>
+                    class="hidden relative h-[min(480px,calc(100vw+1rem))] rounded-lg border border-gray-800 bg-gray-900 shadow-sm overflow-hidden flex lg:h-auto lg:min-h-0 lg:flex-1">
+                    <div class="absolute inset-x-2 top-2 z-30 flex items-start justify-between gap-2 pointer-events-none">
+                        <h2 class="chart-control px-2.5 py-1.5 font-semibold" data-en-text="Finder chart">证认图</h2>
+                        <div id="previewActions" class="flex items-end gap-1.5 pointer-events-auto"></div>
                     </div>
-                    <div class="relative p-4 flex items-center justify-center bg-gray-900 h-[480px] overflow-hidden group/canvas"
-                        id="previewContent">
-                        <!-- 天文方位指引 (J2000 ICRF: 北在上，东在左) -->
-                        <div class="absolute top-3 left-3 z-30 pointer-events-none bg-black/60 backdrop-blur-xs text-white/90 text-[11px] font-mono px-2 py-1 rounded border border-white/20 flex items-center gap-2">
-                            <span data-en-text="↑ North">↑ N (北)</span>
-                            <span data-en-text="← East">← E (东)</span>
-                            <span class="text-white/40">|</span>
-                            <span id="chartFovIndicator">FOV: 10' × 10'</span>
-                        </div>
-                        <p class="text-gray-500 text-sm" data-en-text="Select a target to generate a finder chart.">点击目标自动生成寻星图</p>
+                    <div class="chart-control absolute bottom-2 right-2 z-30 flex items-center font-medium">
+                        <label for="fov" class="pl-2" data-en-text="FOV">视场</label>
+                        <button type="button" id="decreaseFov" onclick="updateChartFov(-1)"
+                            class="h-7 px-2 rounded hover:bg-slate-700 disabled:opacity-30"
+                            aria-label="缩小视场" data-en-aria-label="Decrease field of view">−</button>
+                        <input type="number" id="fov" value="10" min="1" max="60" step="any"
+                            aria-label="视场（角分）" data-en-aria-label="Field of view (arcmin)"
+                            onchange="updateChartFov()" onkeydown="if (event.key === 'Enter') { event.preventDefault(); this.blur(); }"
+                            class="chart-fov-input w-8 py-0.5 bg-white/10 rounded text-center font-mono">
+                        <span aria-hidden="true" class="pl-0.5">′</span>
+                        <button type="button" id="increaseFov" onclick="updateChartFov(1)"
+                            class="h-7 px-2 rounded hover:bg-slate-700 disabled:opacity-30"
+                            aria-label="增大视场" data-en-aria-label="Increase field of view">+</button>
+                    </div>
+                    <div id="previewContent" class="w-full min-h-0 flex items-center justify-center text-center">
+                        <p class="text-sm text-gray-400" data-en-text="Select a target to generate a finder chart.">点击目标自动生成证认图</p>
                     </div>
                 </div>
 
@@ -837,7 +870,25 @@
         let calculationRequestId = 0;
         let previewRequestId = 0;
 
+        const timeSteps = [1, 5, 10, 60];
+        let timeStepIndex = 0;
+
+        function updateTimeStep() {
+            const minutes = timeSteps[timeStepIndex];
+            document.getElementById('timeStepValue').textContent = minutes === 60
+                ? translate('1 小时', '1 h')
+                : translate(minutes + ' 分钟', minutes + ' min');
+            document.getElementById('prevTimeStep').disabled = timeStepIndex === 0;
+            document.getElementById('nextTimeStep').disabled = timeStepIndex === timeSteps.length - 1;
+        }
+
+        function changeTimeStep(direction) {
+            timeStepIndex += direction;
+            updateTimeStep();
+        }
+
         function refreshLocalizedResults() {
+            updateTimeStep();
             updateObservationTimeHint();
             updateCalculateLabel();
             if (observationStatus) renderObservationStatus(observationStatus);
@@ -880,6 +931,8 @@
         // 提交计算
         async function submitCalculation() {
             clearTimeout(timeChangeTimer);
+            const rowsInput = document.getElementById('ntimes');
+            if (!rowsInput.reportValidity()) return;
             const localInput = selectedObservationTime();
             if (!localInput) {
                 const invalidInput = document.querySelector('#observationDate:invalid, #observationTime:invalid');
@@ -933,8 +986,8 @@
                 initmom: initmom,
                 plnvar: '0',
                 nde: document.getElementById('nde').value,
-                ntimes: document.getElementById('ntimes').value,
-                timestep: document.getElementById('timestep').value
+                ntimes: rowsInput.value,
+                timestep: timeSteps[timeStepIndex] / 60
             };
             const requestId = ++calculationRequestId;
             const timeRevision = observationTimeRevision;
@@ -996,128 +1049,93 @@
         let currentStation = null;
         let resultStation = null;
         let currentPreviewItem = null;
+        let currentFov = 10;
         let previewErrorDetails = null;
 
         function altitudeText(item) {
             return item.obs_status === 'geocentric' ? translate('地心', 'Geocentric') : (item.alt_str || '--');
         }
 
-        function altitudeStatus(item, detailed = false) {
-            if (item.obs_status === 'geocentric') return 'No local horizon';
-            if (item.is_observable) return detailed ? 'Observable (≥30°)' : 'Observable';
-            if (item.alt_deg >= 0) return detailed ? 'Low (<30°)' : 'Low';
-            return detailed ? 'Below horizon' : 'Below';
+        function altitudeStatus(item) {
+            if (item.is_observable) return 'Observable';
+            return item.alt_deg >= 0 ? 'Low' : 'Below';
         }
 
         function renderResults(data, targetInfo = currentTargetInfo, station = currentStation) {
             const container = document.getElementById('resultCards');
-            if (!data || data.length === 0) {
+            const target = document.getElementById('resultTargetName');
+            const magnitude = document.getElementById('resultMagnitude');
+            const first = data?.[0];
+            const mag = first?.mag || targetInfo?.mag || '--';
+
+            target.textContent = targetName(targetInfo?.name, currentTargetCode);
+            target.title = target.textContent;
+            magnitude.textContent = mag === '--' ? '' : `${translate('星等', 'Mag.')} ${mag}`;
+            magnitude.classList.toggle('hidden', mag === '--');
+
+            if (!first) {
                 container.innerHTML = `<p class="text-gray-500 text-sm p-4">${translate('暂无数据', 'No results')}</p>`;
                 return;
             }
 
-            const first = data[0];
-            const tName = targetName(targetInfo?.name, currentTargetCode);
-            const diameter = first.diameter || targetInfo?.diameter || '--';
-            const angularSize = first.angular_size || targetInfo?.angular_size || '--';
-            const mag = first.mag || targetInfo?.mag || '--';
             const currentObsInput = (document.getElementById('observatory').value || '286').trim();
             const stCode = first.station_code || station?.code || currentObsInput;
             const stName = stationName(first.station_name || station?.name, stCode);
-
-            // 更新左侧测站徽标
             const stBadge = document.getElementById('currentStationBadge');
-            if (stBadge) {
-                const shortName = translate(stName.split(' ')[0], stName);
-                stBadge.title = stName;
-                stBadge.innerText = `${shortName} (${stCode})`;
-            }
-
-            // 顶部精简摘要
-            const summaryHeader = document.getElementById('targetSummaryHeader');
-            if (summaryHeader) {
-                summaryHeader.innerHTML = `<span>${translate('高度角', 'Altitude')} (${stCode}): <strong class="${first.is_observable ? 'text-emerald-600' : 'text-amber-600'}">${altitudeText(first)}</strong></span>`;
-            }
-
-            // 目标详细状态横幅
-            let bannerHtml = `
-                <div class="p-3 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 border-b border-blue-100 flex flex-wrap items-center justify-between gap-2.5 text-xs">
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-gray-900 text-sm">${tName}</span>
-                        ${mag !== '--' ? `<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold text-[11px]">${translate('星等', 'Mag.')} ${mag}</span>` : ''}
-                    </div>
-                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-600">
-                        <div><span class="text-gray-400">${translate('测站', 'Station')}:</span> <span class="font-medium text-gray-800">${stName} (${stCode})</span></div>
-                        <div>
-                            <span class="text-gray-400">${translate('高度角', 'Altitude')}:</span>
-                            <span class="font-bold font-mono text-sm ${first.is_observable ? 'text-emerald-700' : (first.alt_deg >= 0 ? 'text-amber-700' : 'text-gray-500')}">${altitudeText(first)}</span>
-                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${first.is_observable ? 'bg-emerald-100 text-emerald-800' : (first.alt_deg >= 0 ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600')}">${translate(first.status_text || (first.is_observable ? '适测 ≥30°' : '低空'), altitudeStatus(first, true))}</span>
-                        </div>
-
-                    </div>
-                </div>
-            `;
+            stBadge.title = stName;
+            stBadge.innerText = `${translate(stName.split(' ')[0], stName)} (${stCode})`;
 
             // 数据表格
-            let tableHtml = `
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50 text-gray-600 text-xs uppercase sticky top-0">
-                            <tr>
-                                <th class="px-3 py-2 font-semibold border-b">${translate('时间 (UTC)', 'Time (UTC)')}</th>
-                                <th class="px-3 py-2 font-semibold border-b text-center">${translate('高度角', 'Altitude')} (${stCode})</th>
-                                <th class="px-3 py-2 font-semibold border-b">${translate('赤经 (R.A.)', 'R.A.')}</th>
-                                <th class="px-3 py-2 font-semibold border-b">${translate('赤纬 (Dec.)', 'Dec.')}</th>
-                                
-                                <th class="px-3 py-2 font-semibold border-b text-right">${translate('操作', 'Actions')}</th>
+            container.innerHTML = `
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-700 text-sm uppercase sticky top-0 z-10">
+                        <tr>
+                            <th class="px-3 py-1.5 font-bold border-b">${translate('时间 (UTC)', 'Time (UTC)')}</th>
+                            <th class="px-3 py-1.5 font-bold border-b text-center">${translate('高度角', 'Altitude')}</th>
+                            <th class="px-3 py-1.5 font-bold border-b">${translate('赤经 (R.A.)', 'R.A.')}</th>
+                            <th class="px-3 py-1.5 font-bold border-b">${translate('赤纬 (Dec.)', 'Dec.')}</th>
+                            <th class="px-3 py-1.5 font-bold border-b text-right">${translate('操作', 'Actions')}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm font-mono font-bold text-gray-900 divide-y divide-gray-100">
+                        ${data.map((item, index) => {
+                            const isObs = item.is_observable;
+                            const altColor = isObs
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : (item.alt_deg >= 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-500 border-gray-200');
+                            const label = item.obs_status === 'geocentric' ? '' : translate(
+                                isObs ? '适测' : (item.alt_deg >= 0 ? '低空' : '落'), altitudeStatus(item)
+                            );
+                            const statusPill = label ? `<span class="font-sans ml-1">${label}</span>` : '';
+
+                            return `
+                            <tr class="hover:bg-blue-50/60 transition cursor-pointer ${index === 0 ? 'bg-blue-50/20' : ''}" onclick="handlePreviewDSS(${index})" title="${translate('点击切换该时刻证认图并同步 Stellarium 模拟', 'Show the finder chart and Stellarium view for this time')}">
+                                <td class="px-3 py-1.5 whitespace-nowrap">${item.time}</td>
+                                <td class="px-3 py-1.5 whitespace-nowrap text-center">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded border ${altColor}">
+                                        ${altitudeText(item)}
+                                        ${statusPill}
+                                    </span>
+                                </td>
+                                <td class="px-3 py-1.5 text-blue-700 whitespace-nowrap">${item.ra}</td>
+                                <td class="px-3 py-1.5 text-blue-700 whitespace-nowrap">${item.de}</td>
+
+                                <td class="px-3 py-1.5 text-right whitespace-nowrap">
+                                    <button onclick="event.stopPropagation(); copyRowCoordinates(${index}, this)"
+                                        class="px-2.5 py-1 text-sm font-bold border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+                                        title="${translate('复制赤经赤纬 (可直接粘贴至望远镜控制台)', 'Copy coordinates for a telescope controller')}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        ${translate('复制坐标', 'Copy coordinates')}
+                                    </button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody class="text-sm font-mono text-gray-700 divide-y divide-gray-100">
-                            ${data.map((item, index) => {
-                                const isObs = item.is_observable;
-                                const altColor = isObs 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                    : (item.alt_deg >= 0 ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-500 border-gray-200');
-                                const statusColor = isObs ? 'text-emerald-600' : (item.alt_deg >= 0 ? 'text-amber-600' : 'text-gray-400');
-                                const label = item.obs_status === 'geocentric' ? '' : translate(
-                                    isObs ? '适测' : (item.alt_deg >= 0 ? '低空' : '落'), altitudeStatus(item)
-                                );
-                                const statusPill = label ? `<span class="text-[10px] ${statusColor} font-sans ml-1">${label}</span>` : '';
-                                
-                                const diamText = item.diameter && item.diameter !== '--' ? item.diameter : diameter;
-                                const angText = item.angular_size && item.angular_size !== '--' ? item.angular_size : angularSize;
-
-                                return `
-                                <tr class="hover:bg-blue-50/60 transition cursor-pointer ${index === 0 ? 'bg-blue-50/20' : ''}" onclick="handlePreviewDSS(${index})" title="${translate('点击切换该时刻寻星图并同步 Stellarium 模拟', 'Show the finder chart and Stellarium view for this time')}">
-                                    <td class="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">${item.time}</td>
-                                    <td class="px-3 py-2.5 whitespace-nowrap text-center">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${altColor}">
-                                            ${altitudeText(item)}
-                                            ${statusPill}
-                                        </span>
-                                    </td>
-                                    <td class="px-3 py-2.5 text-blue-700 font-bold whitespace-nowrap">${item.ra}</td>
-                                    <td class="px-3 py-2.5 text-blue-700 font-bold whitespace-nowrap">${item.de}</td>
-
-                                    <td class="px-3 py-2.5 text-right whitespace-nowrap">
-                                        <button onclick="event.stopPropagation(); copyRowCoordinates(${index}, this)" 
-                                            class="px-2.5 py-1 text-xs font-medium border border-gray-200 rounded bg-white text-gray-600 hover:bg-gray-50 hover:text-blue-600 hover:border-blue-200 transition inline-flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
-                                            title="${translate('复制赤经赤纬 (可直接粘贴至望远镜控制台)', 'Copy coordinates for a telescope controller')}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                            </svg>
-                                            ${translate('复制坐标', 'Copy coordinates')}
-                                        </button>
-                                    </td>
-                                </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
             `;
-
-            container.innerHTML = bannerHtml + tableHtml;
         }
 
         // 针对行序号的精确复制（避免字符串内换行导致的 HTML 属性语法错误）
@@ -1179,10 +1197,23 @@
             }
         }
 
+        function updateChartFov(delta = 0) {
+            const input = document.getElementById('fov');
+            const value = Number.isFinite(input.valueAsNumber) ? input.valueAsNumber : currentFov;
+            const fov = Math.min(Number(input.max), Math.max(Number(input.min), value + delta));
+            input.value = fov;
+            document.getElementById('decreaseFov').disabled = fov <= Number(input.min);
+            document.getElementById('increaseFov').disabled = fov >= Number(input.max);
+            if (fov === currentFov) return;
+
+            currentFov = fov;
+            const index = currentResults.indexOf(currentPreviewItem);
+            if (index !== -1) handlePreviewDSS(index, false);
+        }
+
         // 处理 DSS 预览
-        async function handlePreviewDSS(index) {
-            // 获取全局 FOV 设置
-            const fov = document.getElementById('fov').value || 10;
+        async function handlePreviewDSS(index, scroll = true) {
+            const fov = currentFov;
             const item = currentResults[index];
             if (!item) return;
             const requestId = ++previewRequestId;
@@ -1197,8 +1228,10 @@
             previewErrorDetails = null;
 
             previewContainer.classList.remove('hidden');
-            // 滚动到预览区域
-            previewContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // 窄屏时预览在表单下方，桌面端留在当前结果位置。
+            if (scroll && !window.matchMedia('(min-width: 1024px)').matches) {
+                previewContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
 
             currentPreviewUrl = null;
             currentPreviewFilename = null;
@@ -1240,16 +1273,8 @@
 
                     previewContent.innerHTML = `
                         <div class="relative w-full h-full flex items-center justify-center">
-                            <img src="${currentPreviewUrl}" alt="DSS 寻星图" data-en-alt="DSS finder chart" class="max-h-full max-w-full object-contain rounded shadow-lg border border-gray-700 cursor-zoom-in" onclick="openFullscreen()" title="点击全屏查看" data-en-title="Open fullscreen">
-                            <div class="target-marker" aria-hidden="true">
-                            </div>
-                            <div class="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-2.5 py-1 rounded pointer-events-none flex items-center gap-2 font-mono">
-                                <span>FOV: ${fov}'</span>
-                                ${(() => {
-                                    const cObs = (document.getElementById('observatory').value || '286').trim();
-                                    return item.alt_str ? `<span class="text-emerald-400">| ${cObs} <span data-en-text="Alt.">高度</span>: <span data-en-text="${item.obs_status === 'geocentric' ? 'Geocentric' : item.alt_str}">${item.alt_str}</span></span>` : '';
-                                })()}
-                            </div>
+                            <img src="${currentPreviewUrl}" alt="DSS 证认图" data-en-alt="DSS finder chart" class="h-full w-full object-contain cursor-zoom-in" onclick="openFullscreen()" title="点击全屏查看" data-en-title="Open fullscreen">
+                            <div class="target-marker" aria-hidden="true"></div>
                         </div>
                     `;
 
@@ -1284,31 +1309,27 @@
             renderPreviewActions(false);
         }
 
-        // 渲染图像预览卡片操作按钮（Stellarium 星象次级按钮 + 保存图片主按钮）
         function renderPreviewActions(hasImage = false) {
             const previewActions = document.getElementById('previewActions');
             if (!previewActions) return;
 
             let html = `
-                <button type="button" onclick="openStellariumSimulation()" 
-                    class="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-300 hover:border-blue-300 text-xs font-medium rounded flex items-center gap-1.5 transition shadow-2xs cursor-pointer active:scale-95" 
+                <button type="button" onclick="openStellariumSimulation()"
+                    class="chart-control chart-action"
                     title="在新窗口打开 Stellarium 星象 (自动同步当前台站坐标、观测时间、视场与行星系)" data-en-title="Open Stellarium with the current location, time, field of view, and planet">
-                    <svg class="h-3.5 w-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="h-3.5 w-3.5 text-blue-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
                         <path d="M2 12h20"></path>
                     </svg>
-                    <span data-en-text="Stellarium">Stellarium 星象</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
+                    <span data-en-text="Stellarium">星象</span>
                 </button>
             `;
 
             if (hasImage) {
                 html += `
-                    <button type="button" onclick="downloadCurrentPreview()" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded flex items-center gap-1 transition shadow-2xs cursor-pointer active:scale-95">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <button type="button" onclick="downloadCurrentPreview()" class="chart-control chart-action">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
                         <span data-en-text="Save image">保存图片</span>
@@ -1394,8 +1415,7 @@
             }
 
             // 4. 视场 FOV 换算（望远镜角分 arcmin 换算为 Stellarium Web 接受的度数 deg，默认 10' 换算为 0.1667°）
-            const fovArcmin = parseFloat(document.getElementById('fov')?.value || 10) || 10;
-            const fovDeg = (fovArcmin / 60.0).toFixed(4);
+            const fovDeg = (currentFov / 60).toFixed(4);
 
             // 5. 拼装标准化参数并一键直达
             const params = new URLSearchParams({
@@ -1456,7 +1476,7 @@
     <!-- 使用指南模态框 -->
     <div id="guideModal"
         class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                 <h3 class="text-xl font-bold text-gray-800" data-en-text="User Guide">使用指南</h3>
                 <button onclick="toggleModal('guideModal')" aria-label="关闭指南" data-en-aria-label="Close guide" class="text-gray-400 hover:text-gray-600 transition">
@@ -1467,54 +1487,13 @@
                     </svg>
                 </button>
             </div>
-            <div class="p-6 sm:p-8 overflow-y-auto prose text-sm text-gray-600 space-y-4" lang="zh-CN" data-guide-lang>
-                <div>
-                    <h4 class="font-bold text-gray-900 text-base mb-2">1. 目标天体与备选列表</h4>
-                    <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>常用天体按钮平铺（实时高度角与倒计时）</strong>：左侧平铺展示当夜最关键的 10 个常用目标按钮，<strong>按钮底色动态展示当夜剩余可观测时长比例</strong>（绿色 ≥30% 充裕，橙色 &lt;30% 抓紧观测，蓝色待升，灰色已落），<strong>右侧徽章在“剩”和“开”前实时标明当前时刻、当前台站的地平高度角</strong>（如 <code>+62° 剩 4.5h</code>、<code>+24° 22:00开</code>、<code>-45° 03:48开</code>），点击任一按钮优先发起当前目标计算并即刻出证认图。</li>
-                        <li>展开<strong>选择更多目标</strong>，可直接点选 J1–J4、J10–J13、土星和天王星的备选卫星以及行星中心。快捷卡片 U 查询天王星系统质心，U1 可在备选区单独选择。</li>
-                        <li>查询其他目标时，在展开区底部输入 MSU 天体编号，再按回车或点击计算。</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="font-bold text-gray-900 text-base mb-2">2. 观测台站与暗夜时刻</h4>
-                    <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>全球 1400+ 测站适配</strong>：可通过原生下拉菜单快速切换国内主要天文台（<code>286</code> 云南昆明 1m、<code>O44</code> 丽江高美古 2.4m、<code>327</code> 兴隆 2.16m、<code>330</code> 紫金山、<code>D29</code> 盱眙站、<code>337</code> 佘山 1.56m、<code>C42</code> 南山、<code>D39</code> 威海 1m）及国际台站、地心坐标（<code>500</code>），亦可选择“手动输入”输入任意 3 位 IAU/MPC 测站代码。</li>
-                        <li><strong>顶部台站编号与暗夜窗口</strong>：顶部导航栏自适应显示当前所选测站编号与其当夜真正的天文暗夜时刻（太阳高度角 ≤ -18°，如 <code>[286 云南] 暗夜 19:45 ~ 06:00</code>，<code>[O44 丽江] 暗夜 19:54 ~ 06:12</code>）。</li>
-                        <li><strong>智能地心回退机制</strong>：丽江使用 O44 直接查询站心星历。其他测站若未收录于 MSU，星历可回退到地心坐标，高度角仍按网站所用测站位置计算。</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="font-bold text-gray-900 text-base mb-2">3. 观测时间</h4>
-                    <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>指定观测日期</strong>：点击日期打开日历，选择需要观测的日期即自动更新星历、暗夜窗口和寻星图。</li>
-                        <li>默认跟随<strong>当前北京时间 (UTC+8)</strong>，每次计算取当时的时间。点选日期或时刻可固定观测时间，点击<strong>回到当前时间</strong>可恢复跟随。</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="font-bold text-gray-900 text-base mb-2">4. 坐标显示、复制与对接</h4>
-                    <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>赤纬符号与两位数补零规范</strong>：赤纬（Dec.）始终明确带有正负符号（正赤纬如 <code>+14° 01' 50.40"</code>，负赤纬如 <code>-00° 39' 24.88"</code>）；赤经与赤纬的时、度、分即使为零亦统一保持两位数展示与复制（如 <code>00h 08m 10.22s</code>，<code>+14 01 50.403</code>，<code>-00 39 24.881</code>）。</li>
-                        <li><strong>一键复制坐标</strong>：点击表格行末“复制坐标”按钮，即可将赤经赤纬一键写入剪贴板，支持移动端和受限网络环境自动降级，可直接粘贴输入望远镜电控终端。</li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="font-bold text-gray-900 text-base mb-2">5. 地平高度角与寻星图 (DSS)</h4>
-                    <ul class="list-disc pl-5 space-y-1.5">
-                        <li><strong>高度角判据</strong>：相对当前测站地平高度角 ≥30° 标记为绿色“适测”，0°~30° 标记为橙色“低空”，&lt;0° 标记为灰色“落”。</li>
-                        <li><strong>实时寻星图预览</strong>：自动拉取 STScI DSS 红波段高清晰度星图，图中心标注红色十字瞄准星；支持滚轮缩放、拖拽漫游、全屏查看以及一键“保存图片”下载。</li>
-                    </ul>
-                </div>
-
-                <div class="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-xs space-y-1">
-                    <strong>注意事项:</strong><br>
-                    • 数据源来自莫斯科大学天文学研究所 (SAI MSU)，星图来自空间望远镜科学研究所 (STScI DSS)。<br>
-                    • 顶部导航栏右侧显示实时运行的 UTC 时钟，方便国际天文观测对照。
-                </div>
+            <div class="p-6 overflow-y-auto text-sm text-gray-700" lang="zh-CN" data-guide-lang>
+                <ol class="list-decimal pl-5 space-y-2">
+                    <li>先选观测台站，再点选目标天体。其他天体在「选择更多目标」里。</li>
+                    <li>默认使用当前北京时间。可点选日期和时刻。需要多条结果时，设置条数和步长，再点击「开始计算」。</li>
+                    <li>点表格中的一行可查看该时刻的证认图，点「复制坐标」可复制赤经和赤纬。</li>
+                    <li>在图上用 − / + 调整视场，也可以直接输入角分。点图全屏，或用「保存图片」下载。</li>
+                </ol>
             </div>
             {% include 'guide_en.html' %}
             <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
@@ -1568,7 +1547,7 @@
             onmouseleave="endDrag()">
             <div id="fullscreenStage" class="relative inline-block transition-transform duration-75 ease-out will-change-transform"
                 style="transform: translate(0px, 0px) scale(1);">
-                <img id="fullscreenImage" alt="DSS 寻星图" data-en-alt="DSS finder chart" class="block max-w-none shadow-2xl rounded-sm">
+                <img id="fullscreenImage" alt="DSS 证认图" data-en-alt="DSS finder chart" class="block max-w-none shadow-2xl rounded-sm">
                 <div id="fullscreenTargetMarker" class="target-marker" aria-hidden="true">
                 </div>
             </div>

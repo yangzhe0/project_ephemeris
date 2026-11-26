@@ -707,7 +707,7 @@ def calculate():
                            "Invalid date or time. Use YYYY MM DD HH mm ss.")
     try:
         nde = _bounded_int(data.get("nde", 6), "历表类型", "Ephemeris model", 0, 10)
-        ntimes = _bounded_int(data.get("ntimes", 1), "步数", "Number of steps", 1, 100)
+        ntimes = _bounded_int(data.get("ntimes", 1), "条数", "Number of rows", 1, 100)
         timestep = _bounded_float(data.get("timestep", 1), "步长", "Step size", 0.001, 8760)
     except InputError as exc:
         return _json_error(str(exc), exc.message_en)
