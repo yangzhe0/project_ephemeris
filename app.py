@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from urllib.parse import urlencode
+from uuid import uuid4
 
 try:
     import numpy as np
@@ -36,6 +37,7 @@ app = Flask(__name__)
 
 MSU_URL = "https://www.sai.msu.ru/neb/nss/cgi-bin/nss-eph3.cgi"
 DSS_URL = "https://archive.stsci.edu/cgi-bin/dss_search"
+DSS_SURVEY = "poss2ukstu_red"
 REQUEST_HEADERS = {"User-Agent": "project-ephemeris/1.0"}
 MAX_DSS_BYTES = 25 * 1024 * 1024
 CACHE_DIR = Path(tempfile.gettempdir()) / "project_ephemeris_dss"
@@ -53,7 +55,7 @@ SATELLITES = [
     {"name": "S9 (6009)", "code": "6009", "planet": "saturn"},
     {"name": "S1~S7 (6001)", "code": "6001", "planet": "saturn"},
     # 天王星系统
-    {"name": "U1~U5 (7001)", "code": "7001", "planet": "uranus"},
+    {"name": "U (7999)", "code": "7999", "planet": "uranus"},
     # 木星系统（后半夜空闲观测）
     {"name": "J6 (10001)", "code": "10001", "planet": "jupiter"},
     {"name": "J7 (10002)", "code": "10002", "planet": "jupiter"},
@@ -164,7 +166,7 @@ def download_dss_image(
     dec: str,
     height: float = 7,
     width: float = 7,
-    survey: str = "poss2ukstu_red",
+    survey: str = DSS_SURVEY,
     file_format: str = "gif",
 ) -> tuple[str, Path] | None:
     """Download a DSS image into the application-owned cache."""
@@ -226,7 +228,7 @@ def _load_observatories() -> dict[str, dict[str, Any]]:
             pass
     return {
         "286": {"name": "云南天文台昆明 1m望远镜", "lat": 25.0294, "lon": 102.7883, "alt": 2000.0},
-        "O07": {"name": "云南天文台丽江 2.4m望远镜", "lat": 26.6950, "lon": 100.0300, "alt": 3200.0},
+        "O44": {"name": "云南天文台丽江 2.4m望远镜", "lat": 26.69509, "lon": 100.02973, "alt": 3241.0},
         "327": {"name": "国家天文台兴隆观测站 (2.16m/大视场)", "lat": 40.3964, "lon": 117.5750, "alt": 960.0},
         "500": {"name": "地心坐标", "lat": 0.0, "lon": 0.0, "alt": 0.0},
     }
@@ -238,7 +240,9 @@ def normalize_obs_code(raw_code: str) -> str:
     s = str(raw_code or "").strip()
     m = re.search(r"\[?([A-Za-z0-9]{1,6})\]?", s)
     if m:
-        return m.group(1).upper()
+        code = m.group(1).upper()
+        # Earlier releases used O07 for the Lijiang preset.
+        return "O44" if code == "O07" else code
     return s[:16] or "286"
 
 
@@ -283,7 +287,8 @@ TARGET_METADATA = {
     "6000": {"name": "土星 Saturn (中心)", "diameter": "120,536 km", "angular_size": "约 18.5″", "mag": "0.6", "parent": "土星"},
 
     # 天王星系统 (Uranus)
-    "7001": {"name": "天卫一 Ariel (U1~U5)", "diameter": "1,158 km (系内472~1578km)", "angular_size": "0.03″~0.11″", "mag": "14.0~16.5", "parent": "天王星 (Uranus)"},
+    "7999": {"name": "天王星系统质心 Uranian system barycenter", "parent": "天王星 (Uranus)"},
+    "7001": {"name": "天卫一 Ariel (U1)", "diameter": "1,158 km", "parent": "天王星 (Uranus)"},
     "7002": {"name": "天卫二 Umbriel (U2)", "diameter": "1,169 km", "angular_size": "约 0.08″", "mag": "15.0", "parent": "天王星 (Uranus)"},
     "7003": {"name": "天卫三 Titania (U3)", "diameter": "1,578 km", "angular_size": "约 0.11″", "mag": "13.9", "parent": "天王星 (Uranus)"},
     "7004": {"name": "天卫四 Oberon (U4)", "diameter": "1,523 km", "angular_size": "约 0.11″", "mag": "14.1", "parent": "天王星 (Uranus)"},
@@ -295,6 +300,10 @@ TARGET_METADATA = {
     "10002": {"name": "木卫七 Elara (J7)", "diameter": "86 km", "angular_size": "约 0.03″", "mag": "16.3", "parent": "木星 (Jupiter)"},
     "10003": {"name": "木卫八 Pasiphae (J8)", "diameter": "60 km", "angular_size": "约 0.02″", "mag": "17.0", "parent": "木星 (Jupiter)"},
     "10004": {"name": "木卫九 Sinope (J9)", "diameter": "38 km", "angular_size": "约 0.01″", "mag": "18.3", "parent": "木星 (Jupiter)"},
+    "10005": {"name": "木卫十 Lysithea (J10)", "parent": "木星 (Jupiter)"},
+    "10006": {"name": "木卫十一 Carme (J11)", "parent": "木星 (Jupiter)"},
+    "10007": {"name": "木卫十二 Ananke (J12)", "parent": "木星 (Jupiter)"},
+    "10008": {"name": "木卫十三 Leda (J13)", "parent": "木星 (Jupiter)"},
     "5001": {"name": "木卫一 Io (J1)", "diameter": "3,643 km", "angular_size": "约 1.2″", "mag": "5.0", "parent": "木星 (Jupiter)"},
     "5002": {"name": "木卫二 Europa (J2)", "diameter": "3,122 km", "angular_size": "约 1.0″", "mag": "5.3", "parent": "木星 (Jupiter)"},
     "5003": {"name": "木卫三 Ganymede (J3)", "diameter": "5,268 km", "angular_size": "约 1.7″", "mag": "4.6", "parent": "木星 (Jupiter)"},
@@ -450,6 +459,63 @@ def parse_ephemeris(pre_content: str, observatory: str = "286", satellite: str =
 _EPHEM_CACHE: dict[str, dict[str, Any]] = {}
 _EPHEM_CACHE_LOCK = threading.Lock()
 
+MSU_PLANET_SYSTEMS = {
+    4: ("Mars", "M"), 5: ("Jupiter", "J"), 6: ("Saturn", "S"),
+    7: ("Uranus", "U"), 8: ("Neptune", "N"), 9: ("Pluto", "P"),
+    10: ("Jupiter", "J"),
+}
+
+
+def _msu_response_matches(pre_content: str, payload: dict) -> bool:
+    station = re.search(r"^\s*Observatory N:\s*(\w+)", pre_content, re.MULTILINE | re.IGNORECASE)
+    geocentric = re.search(r"^\s*Observer position:\s*Geocenter\b", pre_content, re.MULTILINE | re.IGNORECASE)
+    returned_station = station[1].upper() if station else "500" if geocentric else None
+    if returned_station != payload["observatory"].zfill(3):
+        return False
+
+    code = payload["satellite"]
+    family, number = divmod(int(code), 1000)
+    system = MSU_PLANET_SYSTEMS.get(family)
+    if system is None:
+        return True
+    planet, prefix = system
+    planet_header = re.search(r"\bPlanet:\s*([A-Za-z]+)", pre_content)
+    if not planet_header or planet_header[1].casefold() != planet.casefold():
+        return False
+
+    target = re.search(r"^\s*Satellite:\s*([^\r\n]+)", pre_content, re.MULTILINE)
+    if number == 0:
+        return not target or target[1].lower().startswith("planet")
+    if number == 999:
+        return bool(target and target[1].lower().startswith("barycenter"))
+    if code in TARGET_METADATA:
+        satellite_number = number + 5 if family == 10 else number
+        return bool(target and re.match(rf"{prefix}{satellite_number}\b", target[1], re.IGNORECASE))
+    return True
+
+
+def _request_msu_ephemeris(payload: dict) -> tuple[str, str] | None:
+    for retry in (False, True):
+        response = requests.post(
+            MSU_URL, data=payload, params={"request_id": uuid4().hex} if retry else None,
+            headers={**REQUEST_HEADERS, "Cache-Control": "no-cache"}, timeout=(12, 30),
+        )
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+        pre_tag = soup.find("pre")
+        content = pre_tag.get_text() if pre_tag else ""
+        title = soup.title.get_text(strip=True) if soup.title else ""
+        if not pre_tag or "error" in title.lower() or "error is discovered" in content.lower():
+            return content, title
+        if _msu_response_matches(content, payload):
+            return content, title
+        app.logger.warning(
+            "MSU returned mismatched ephemeris headers for target %s at station %s",
+            payload["satellite"], payload["observatory"],
+        )
+    return None
+
+
 def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, timestep):
     observatory = normalize_obs_code(observatory)
     cache_key = f"{plnvar}_{satellite}_{nde}_{observatory}_{initmom}_{ntimes}_{timestep}"
@@ -464,48 +530,32 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
         "ntimes": ntimes, "outputtype": "0", "vangle": "0",
     }
     try:
-        # 放宽连接与读取超时，增强弱网抗波动能力
-        response = requests.post(
-            MSU_URL, data=payload, headers=REQUEST_HEADERS, timeout=(12, 30)
-        )
-        response.raise_for_status()
+        result = _request_msu_ephemeris(payload)
+        coordinate_observatory = observatory
+        if result and "not found in the observatory list" in result[0].lower() and observatory != "O44":
+            fallback = _request_msu_ephemeris({**payload, "observatory": "500"})
+            if fallback and "not found in the observatory list" not in fallback[0].lower():
+                result = fallback
+                coordinate_observatory = "500"
     except requests.Timeout:
         return _error_payload("星历服务器请求超时，请稍后重试", "The ephemeris server timed out. Try again shortly.")
     except requests.RequestException:
         return _error_payload("无法连接星历服务器，请稍后重试", "Could not reach the ephemeris server. Try again shortly.")
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    pre_tag = soup.find("pre")
-    pre_content = pre_tag.get_text() if pre_tag else ""
-    page_title = soup.title.get_text(strip=True) if soup.title else ""
-
-    # 若 MSU 历史内置台站表中未收录该台站代码（如近年设立的 O07 丽江 2.4m 等）
-    # 自动以 500 (地心坐标) 获取该天体天球坐标，本地再基于所选测站的精确经纬度与海拔推算高度角与晨昏窗口
-    if "not found in the observatory list" in pre_content.lower():
-        fallback_payload = dict(payload)
-        fallback_payload["observatory"] = "500"
-        try:
-            fb_response = requests.post(
-                MSU_URL, data=fallback_payload, headers=REQUEST_HEADERS, timeout=(12, 30)
-            )
-            fb_response.raise_for_status()
-            fb_soup = BeautifulSoup(fb_response.text, "html.parser")
-            fb_pre = fb_soup.find("pre")
-            if fb_pre and "not found in the observatory list" not in fb_pre.get_text().lower():
-                pre_tag = fb_pre
-                pre_content = fb_pre.get_text()
-                page_title = fb_soup.title.get_text(strip=True) if fb_soup.title else ""
-        except Exception:
-            pass
-
-    if not pre_tag:
+    if result is None:
+        return _error_payload(
+            "星历服务器返回的目标或测站与查询不符，请重试",
+            "The ephemeris server returned a different target or station. Try again.",
+        )
+    pre_content, page_title = result
+    if not pre_content:
         return _error_payload("星历服务器未返回预期的数据格式", "The ephemeris server returned an unexpected format.")
 
     if "error" in page_title.lower() or "error is discovered" in pre_content.lower():
         if "not found in the observatory list" in pre_content.lower():
             return _error_payload(
-                f"MSU 星历服务器未收录测站代码 {observatory}，且地心回退失败，请核对测站代码",
-                f"MSU did not recognize station {observatory} and the geocentric request failed. Check the station code.",
+                f"MSU 星历服务器未能返回测站 {observatory} 的星历，请核对测站代码或稍后重试",
+                f"MSU could not return ephemerides for station {observatory}. Check the station code or try again.",
             )
         return _error_payload(
             f"MSU 星历服务器不支持天体代码 {satellite}，"
@@ -530,6 +580,7 @@ def fetch_satellite_data(plnvar, satellite, nde, observatory, initmom, ntimes, t
     res = {
         "success": True,
         "data": results,
+        "coordinate_observatory": coordinate_observatory,
         "target_info": target_info,
         "station": station
     }
@@ -547,7 +598,11 @@ def _safe_download_name(value: str) -> str:
 
 @app.route("/")
 def index():
-    return render_template("index.html", satellites=SATELLITES, default_satellite="8001")
+    from planner_data import EXTRA_TARGET_GROUPS
+
+    return render_template(
+        "index.html", satellites=SATELLITES, default_satellite="8001", extra_target_groups=EXTRA_TARGET_GROUPS,
+    )
 
 
 @app.route("/planner")
@@ -684,7 +739,7 @@ def download_chart():
         dt = datetime.now(timezone.utc)
     satellite_name = _safe_download_name(str(data.get("satellite_name", "Unknown")).split("(")[0])
     filename = f"{satellite_name}_{dt.strftime('%Y%m%d_%Hh%Mm%Ss')}_fov{fov:g}.gif"
-    query = urlencode({"filename": filename})
+    query = urlencode({"filename": filename, "ra": ra, "dec": dec, "fov": fov})
     download_url = f"{url_for('get_file', cache_id=cache_id)}?{query}"
     return jsonify({"success": True, "download_url": download_url, "filename": filename})
 
@@ -695,11 +750,22 @@ def get_file(cache_id: str):
         return "File not found", 404
     filepath = _cache_path(cache_id)
     if not filepath.is_file():
-        return "File not found", 404
+        # Each serverless instance has its own temporary cache.
+        try:
+            ra, dec = _parse_coordinates(request.args.get("ra", ""), request.args.get("dec", ""))
+            fov = _bounded_float(request.args.get("fov"), "视场", "Field of view", 1, 60)
+        except InputError:
+            return "File not found", 404
+        if _cache_id(ra, dec, fov, fov, DSS_SURVEY, "gif") != cache_id:
+            return "File not found", 404
+        result = download_dss_image(ra, dec, height=fov, width=fov)
+        if result is None:
+            return _json_error("从 DSS 服务器获取图片失败", "Could not retrieve the image from DSS.", 502)
+        _, filepath = result
     filename = _safe_download_name(request.args.get("filename", "dss_chart.gif"))
     if not filename.lower().endswith(".gif"):
         filename += ".gif"
-    return send_file(filepath, mimetype="image/gif", download_name=filename)
+    return send_file(filepath, mimetype="image/gif", download_name=filename, max_age=3600)
 
 
 @app.route("/robots.txt")
@@ -839,7 +905,7 @@ def compute_dynamic_windows(bjt_dt=None, obs_code="286"):
 
     planets_eval = {}
     best_candidate = "8001"
-    priority_order = [("neptune", "8001"), ("saturn", "6008"), ("saturn", "6001"), ("uranus", "7001"), ("jupiter", "10001")]
+    priority_order = [("neptune", "8001"), ("saturn", "6008"), ("saturn", "6001"), ("uranus", "7999"), ("jupiter", "10001")]
     found_best = False
 
     for p_key, p_info in schedule["planets"].items():

@@ -65,7 +65,7 @@ PLANNER_TARGETS = [
     },
     {
         "id": "U1-U5",
-        "code": "7001",
+        "code": "7999",
         "planet": "uranus",
         "planet_zh": "天王星",
         "planet_en": "Uranus",
@@ -128,6 +128,7 @@ PLANNER_TARGETS = [
 EXTRA_TARGET_GROUPS = [
     {
         "label": "木星天然卫星（伽利略大卫星 J1–J4）",
+        "label_en": "Galilean moons (J1–J4)",
         "items": [
             {"id": "J1", "code": "5001", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫一 (Io / 艾奥)", "short": "J1", "color": "#ea580c", "order": 11},
             {"id": "J2", "code": "5002", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫二 (Europa / 欧罗巴)", "short": "J2", "color": "#f97316", "order": 12},
@@ -137,6 +138,7 @@ EXTRA_TARGET_GROUPS = [
     },
     {
         "label": "木星外围不规则卫星备选（J10–J13）",
+        "label_en": "Outer moons of Jupiter (J10–J13)",
         "items": [
             {"id": "J10", "code": "10005", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫十 (Lysithea)", "short": "J10", "color": "#be123c", "order": 15},
             {"id": "J11", "code": "10006", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫十一 (Carme)", "short": "J11", "color": "#9f1239", "order": 16},
@@ -146,6 +148,7 @@ EXTRA_TARGET_GROUPS = [
     },
     {
         "label": "土星天然卫星备选（S2–S7）",
+        "label_en": "Saturn moons (S2–S7)",
         "items": [
             {"id": "S2", "code": "6002", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫二 (Enceladus)", "short": "S2", "color": "#ca8a04", "order": 21},
             {"id": "S3", "code": "6003", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土卫三 (Tethys)", "short": "S3", "color": "#eab308", "order": 22},
@@ -156,8 +159,10 @@ EXTRA_TARGET_GROUPS = [
         ],
     },
     {
-        "label": "天王星天然卫星备选（U2–U5）",
+        "label": "天王星天然卫星备选（U1–U5）",
+        "label_en": "Uranus moons (U1–U5)",
         "items": [
+            {"id": "U1", "code": "7001", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫一 (Ariel)", "short": "U1", "color": "#0d9488", "order": 30},
             {"id": "U2", "code": "7002", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫二 (Umbriel)", "short": "U2", "color": "#0f766e", "order": 31},
             {"id": "U3", "code": "7003", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫三 (Titania)", "short": "U3", "color": "#14b8a6", "order": 32},
             {"id": "U4", "code": "7004", "planet": "uranus", "planet_zh": "天王星", "planet_en": "Uranus", "name": "天卫四 (Oberon)", "short": "U4", "color": "#0891b2", "order": 33},
@@ -166,6 +171,7 @@ EXTRA_TARGET_GROUPS = [
     },
     {
         "label": "行星本体中心",
+        "label_en": "Planet centers",
         "items": [
             {"id": "Neptune", "code": "8000", "planet": "neptune", "planet_zh": "海王星", "planet_en": "Neptune", "name": "海王星本体中心 (Neptune)", "short": "海王星", "color": "#1d4ed8", "order": 41},
             {"id": "Saturn", "code": "6000", "planet": "saturn", "planet_zh": "土星", "planet_en": "Saturn", "name": "土星本体中心 (Saturn)", "short": "土星", "color": "#92400e", "order": 42},
@@ -199,8 +205,8 @@ STATION_PROFILES = {
         "standard_filter": "I",
         "notes": "焦距13.3m，像元13.5μm，比例尺约0.21″/pixel，2K像元对应视场约7.1′。到站后请向观测助手确认当前相机参数与Bin设置。",
     },
-    "O07": {
-        "code": "O07",
+    "O44": {
+        "code": "O44",
         "name": "云南天文台丽江高美古2.4米望远镜",
         "short_name": "丽江2.4m",
         "aperture_cm": "240 cm",
@@ -209,7 +215,7 @@ STATION_PROFILES = {
         "fov_arcmin": "约 10′",
         "pixel_scale": "0.283″/pixel",
         "standard_filter": "I",
-        "notes": "海拔3200m，视宁度通常优于1.2″，口径2.4米，集光能力约为1米镜的5.76倍，可适当缩短单帧曝光时间。",
+        "notes": "海拔约3241m，视宁度通常优于1.2″，口径2.4米，集光能力约为1米镜的5.76倍，可适当缩短单帧曝光时间。",
     },
     "327": {
         "code": "327",

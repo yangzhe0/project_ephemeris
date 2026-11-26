@@ -3,7 +3,7 @@
                     <h4 class="font-bold text-gray-900 text-base mb-2">1. Choosing a target</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
                         <li>The ten preset buttons show the current altitude and observing window at the selected station. Green means at least 30% of the window remains, orange means less than 30%, blue means the window has yet to start, and gray means it has ended. Select a target to calculate its ephemeris and generate a finder chart.</li>
-                        <li>The dropdown includes Jupiter’s Galilean moons (<code>5001</code>–<code>5004</code>), more moons of Saturn and Uranus, and planet centers. Choose <strong>Enter a satellite code</strong> to enter an MSU natural satellite code manually.</li>
+                        <li>Expand <strong>More targets</strong> to select J1–J4, J10–J13, additional moons of Saturn and Uranus, or planet centers. The U shortcut selects the Uranian system barycenter. Select U1 under More targets for Ariel. The same section also accepts an MSU target code.</li>
                     </ul>
                 </div>
                 <div>
@@ -11,13 +11,13 @@
                     <ul class="list-disc pl-5 space-y-1.5">
                         <li>Choose a preset observatory, enter a three-character IAU/MPC station code, or select <code>500</code> for geocentric coordinates.</li>
                         <li>The header shows the selected station’s observing window in Beijing time (UTC+8). Hover over it for the astronomical darkness window and sunrise.</li>
-                        <li>When MSU does not list a station, the tool requests geocentric coordinates and uses the selected station’s location to compute altitude and twilight.</li>
+                        <li>The Lijiang preset uses O44 for topocentric ephemerides. For other stations missing from MSU, the tool can request geocentric ephemerides and use the selected site to calculate altitude and twilight.</li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-bold text-gray-900 text-base mb-2">3. Observation time</h4>
                     <ul class="list-disc pl-5 space-y-1.5">
-                        <li>When the page opens, the date and time default to the <strong>current Beijing time (UTC+8)</strong>. Choose a date or adjust the time to update the ephemeris, night window, and finder chart automatically. The tool converts the selected time to UTC for the ephemeris.</li>
+                        <li>The fields follow <strong>current Beijing time (UTC+8)</strong> by default, and each calculation uses the current time. Pick a date or time to calculate for a fixed instant. Click <strong>Use current time</strong> to resume following the clock.</li>
                     </ul>
                 </div>
                 <div>

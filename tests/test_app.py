@@ -75,7 +75,7 @@ class EphemerisTests(unittest.TestCase):
             "6008",  # S8 Iapetus
             "6009",  # S9 Phoebe
             "6001",  # S1~S7 (Mimas to Hyperion in same 10' FOV)
-            "7001",  # U1~U5 (Miranda to Oberon in same FOV)
+            "7999",  # Uranian system barycenter
             "10001", "10002", "10003", "10004",  # J6-J9
         ]
         self.assertEqual(len(ephemeris.SATELLITES), 10)
@@ -202,7 +202,14 @@ class EphemerisTests(unittest.TestCase):
         self.assertEqual(downloaded.status_code, 200)
         self.assertEqual(downloaded.data, b"GIF89a")
         downloaded.close()
+        get.assert_called_once()
 
+        cache_path.unlink()
+        downloaded = self.client.get(response.json["download_url"])
+        self.assertEqual(downloaded.status_code, 200)
+        self.assertEqual(downloaded.data, b"GIF89a")
+        downloaded.close()
+        self.assertEqual(get.call_count, 2)
 
 
     def test_observation_status_dynamic_endpoint(self):
@@ -257,7 +264,7 @@ class EphemerisTests(unittest.TestCase):
     def test_observatories_database_support(self):
         """Verify 1400+ IAU / MPC observatory database is accessible."""
         self.assertGreater(len(ephemeris.OBSERVATORIES), 1000)
-        for code in ["286", "327", "O07", "000"]:
+        for code in ["286", "327", "O44", "000"]:
             st = ephemeris.get_observatory(code)
             self.assertEqual(st["code"], code)
             self.assertTrue(len(st["name"]) > 0)
@@ -278,34 +285,65 @@ class EphemerisTests(unittest.TestCase):
 
     def test_normalize_obs_code(self):
         self.assertEqual(ephemeris.normalize_obs_code("286"), "286")
-        self.assertEqual(ephemeris.normalize_obs_code("O07"), "O07")
-        self.assertEqual(ephemeris.normalize_obs_code("o07"), "O07")
-        self.assertEqual(ephemeris.normalize_obs_code("[O07] 丽江高美古 2.4m望远镜"), "O07")
+        self.assertEqual(ephemeris.normalize_obs_code("O07"), "O44")
+        self.assertEqual(ephemeris.normalize_obs_code("o07"), "O44")
+        self.assertEqual(ephemeris.normalize_obs_code("[O07] 丽江高美古 2.4m望远镜"), "O44")
         self.assertEqual(ephemeris.normalize_obs_code("327 - 兴隆观测基地"), "327")
         self.assertEqual(ephemeris.normalize_obs_code("500"), "500")
 
     @patch("app.requests.post")
+    def test_msu_retries_mismatched_target_and_station(self, post):
+        ariel = SAMPLE_TRITON_PRE.replace("Planet: Neptune", "Planet: Uranus").replace(
+            "N1 Triton", "U1 Ariel"
+        ).replace("Observatory N: 286", "Observatory N: O44")
+        wrong = ariel.replace("Planet: Uranus", "Planet: Jupiter").replace(
+            "U1 Ariel", "J10 Lysithea"
+        ).replace("Observatory N: O44 - Yunnan Observatory", "Observer position: Geocenter")
+        post.side_effect = [
+            MagicMock(text=f"<pre>{wrong}</pre>"),
+            MagicMock(text=f"<pre>{ariel}</pre>"),
+        ]
+        result = ephemeris.fetch_satellite_data("0", "7001", "6", "O07", "2026 11 05 12 00 00", "2", "1")
+        self.assertTrue(result["success"])
+        self.assertEqual(result["coordinate_observatory"], "O44")
+        self.assertAlmostEqual(result["station"]["lat"], 26.69509)
+        self.assertEqual(post.call_count, 2)
+        self.assertEqual(post.call_args.kwargs["data"]["observatory"], "O44")
+        self.assertTrue(post.call_args.kwargs["params"]["request_id"])
+
+    @patch("app.requests.post")
+    def test_msu_rejects_wrong_satellite_within_same_system(self, post):
+        pre = SAMPLE_TRITON_PRE.replace("N1 Triton", "N2 Nereid").replace("Observatory N: 286", "Observatory N: O44")
+        post.return_value = MagicMock(text=f"<pre>{pre}</pre>")
+        result = ephemeris.fetch_satellite_data("0", "8001", "6", "O44", "2026 11 05 12 00 00", "2", "1")
+        self.assertFalse(result["success"])
+        self.assertNotIn("data", result)
+        self.assertEqual(post.call_count, 2)
+
+    @patch("app.requests.post")
     def test_fetch_satellite_data_unlisted_observatory_fallback(self, post):
         resp_err = MagicMock()
-        resp_err.text = "<html><head><title>NatSatEphemOutput - Error</title></head><body><pre>Observatory number O07 is not found in the observatory list</pre></body></html>"
+        resp_err.text = "<html><head><title>NatSatEphemOutput - Error</title></head><body><pre>Observatory number 327 is not found in the observatory list</pre></body></html>"
         resp_err.raise_for_status.return_value = None
 
         resp_ok = MagicMock()
-        resp_ok.text = f"<html><head><title>NatSatEphemOutput</title></head><body><pre>{SAMPLE_TRITON_PRE}</pre></body></html>"
+        geocentric_pre = SAMPLE_TRITON_PRE.replace("Observatory N: 286 - Yunnan Observatory", "Observer position: Geocenter")
+        resp_ok.text = f"<html><head><title>NatSatEphemOutput</title></head><body><pre>{geocentric_pre}</pre></body></html>"
         resp_ok.raise_for_status.return_value = None
 
         post.side_effect = [resp_err, resp_ok]
 
-        res = ephemeris.fetch_satellite_data("0", "8001", "6", "O07", "2026 11 05 12 00 00", "1", "1")
+        res = ephemeris.fetch_satellite_data("0", "8001", "6", "327", "2026 11 05 12 00 00", "1", "1")
         self.assertTrue(res["success"])
-        self.assertEqual(res["station"]["code"], "O07")
-        self.assertIn("丽江", res["station"]["name"])
+        self.assertEqual(res["station"]["code"], "327")
+        self.assertEqual(res["coordinate_observatory"], "500")
+        self.assertIn("兴隆", res["station"]["name"])
         self.assertEqual(len(res["data"]), 2)
-        self.assertIn("丽江", res["data"][0]["station_name"])
+        self.assertIn("兴隆", res["data"][0]["station_name"])
 
     def test_calculate_api_accepts_bracketed_and_labeled_observatory(self):
         with patch("app.fetch_satellite_data") as mock_fetch:
-            mock_fetch.return_value = {"success": True, "data": [], "station": {"code": "O07", "name": "丽江"}}
+            mock_fetch.return_value = {"success": True, "data": [], "station": {"code": "O44", "name": "丽江"}}
             res = self.client.post("/api/calculate", json={
                 "satellite": "8001",
                 "observatory": "[O07] 丽江高美古 2.4m望远镜",
@@ -314,7 +352,7 @@ class EphemerisTests(unittest.TestCase):
             self.assertEqual(res.status_code, 200)
             mock_fetch.assert_called_once()
             call_args = mock_fetch.call_args[0]
-            self.assertEqual(call_args[3], "O07")
+            self.assertEqual(call_args[3], "O44")
 
 
 if __name__ == "__main__":
