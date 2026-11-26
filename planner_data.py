@@ -125,7 +125,7 @@ PLANNER_TARGETS = [
     },
 ]
 
-EXTRA_TARGET_GROUPS = [
+JUPITER_MOON_GROUPS = [
     {
         "label": "木星天然卫星（伽利略大卫星 J1–J4）",
         "label_en": "Galilean moons (J1–J4)",
@@ -146,6 +146,10 @@ EXTRA_TARGET_GROUPS = [
             {"id": "J13", "code": "10008", "planet": "jupiter", "planet_zh": "木星", "planet_en": "Jupiter", "name": "木卫十三 (Leda)", "short": "J13", "color": "#a21caf", "order": 18},
         ],
     },
+]
+
+EXTRA_TARGET_GROUPS = [
+    *JUPITER_MOON_GROUPS,
     {
         "label": "土星天然卫星备选（S2–S7）",
         "label_en": "Saturn moons (S2–S7)",

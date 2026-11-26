@@ -598,10 +598,10 @@ def _safe_download_name(value: str) -> str:
 
 @app.route("/")
 def index():
-    from planner_data import EXTRA_TARGET_GROUPS
+    from planner_data import JUPITER_MOON_GROUPS
 
     return render_template(
-        "index.html", satellites=SATELLITES, default_satellite="8001", extra_target_groups=EXTRA_TARGET_GROUPS,
+        "index.html", satellites=SATELLITES, default_satellite="8001", extra_target_groups=JUPITER_MOON_GROUPS,
     )
 
 
