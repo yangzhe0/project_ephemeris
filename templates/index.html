@@ -368,9 +368,17 @@
                                         <span aria-hidden="true" class="group-open/more:rotate-180">⌄</span>
                                     </summary>
                                     <div class="space-y-2.5 px-2 pb-2">
+                                        <div class="grid grid-cols-4 gap-1 rounded-md bg-gray-100 p-1" role="group"
+                                            aria-label="按大行星筛选" data-en-aria-label="Filter by planet">
+                                            {% for group in extra_target_groups %}
+                                            <button type="button" onclick="showTargetGroup(this)"
+                                                aria-controls="target-group-{{ group.id }}" aria-pressed="{{ 'true' if loop.first else 'false' }}"
+                                                class="rounded px-1 py-1.5 text-xs font-medium text-gray-600 hover:bg-white aria-pressed:bg-blue-100 aria-pressed:text-blue-800"
+                                                data-en-text="{{ group.label_en }}">{{ group.label }}</button>
+                                            {% endfor %}
+                                        </div>
                                         {% for group in extra_target_groups %}
-                                        <div>
-                                            <p class="mb-1 text-[11px] font-medium text-gray-500" data-en-text="{{ group.label_en }}">{{ group.label }}</p>
+                                        <div id="target-group-{{ group.id }}"{% if not loop.first %} hidden{% endif %}>
                                             <div class="grid grid-cols-2 gap-1.5">
                                                 {% for sat in group["items"] %}
                                                 {{ target_card(sat, sat.short, sat.planet_en if sat.id == sat.planet_en else none) }}
@@ -800,6 +808,14 @@
                     }
                 }
             });
+        }
+
+        function showTargetGroup(selectedButton) {
+            for (const button of selectedButton.parentElement.querySelectorAll('button[aria-controls]')) {
+                const selected = button === selectedButton;
+                button.setAttribute('aria-pressed', String(selected));
+                document.getElementById(button.getAttribute('aria-controls')).hidden = !selected;
+            }
         }
 
         function onSelectSatellite() {

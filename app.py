@@ -598,10 +598,20 @@ def _safe_download_name(value: str) -> str:
 
 @app.route("/")
 def index():
-    from planner_data import JUPITER_MOON_GROUPS
+    from planner_data import ALL_EXTRA_TARGETS, PLANET_META
+
+    extra_target_groups = [
+        {
+            "id": planet,
+            "label": meta["zh"],
+            "label_en": meta["en"],
+            "items": [target for target in ALL_EXTRA_TARGETS if target["planet"] == planet],
+        }
+        for planet, meta in PLANET_META.items()
+    ]
 
     return render_template(
-        "index.html", satellites=SATELLITES, default_satellite="8001", extra_target_groups=JUPITER_MOON_GROUPS,
+        "index.html", satellites=SATELLITES, default_satellite="8001", extra_target_groups=extra_target_groups,
     )
 
 
